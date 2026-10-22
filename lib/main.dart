@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'services/session.dart';
+import 'screens/appointments_screen.dart';
 
 void main() {
   runApp(
@@ -209,33 +210,35 @@ class _RoleHomeState extends State<RoleHome> {
     body: Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 720),
-        child: ListView(
-          padding: const EdgeInsets.all(20),
-          children: [
-            Text(
-              'Xin chào, $_roleName',
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            const SizedBox(height: 16),
-            Card(
-              child: Padding(
+        child: _tab == 0 && widget.role != 'admin'
+            ? AppointmentsScreen(doctor: widget.role == 'doctor')
+            : ListView(
                 padding: const EdgeInsets.all(20),
-                child: Row(
-                  children: [
-                    Icon(
-                      _tab == 0 ? Icons.calendar_month : Icons.medical_services,
-                      size: 32,
-                      color: Theme.of(context).colorScheme.primary,
+                children: [
+                  Text(
+                    'Xin chào, $_roleName',
+                    style: Theme.of(context).textTheme.headlineSmall,
+                  ),
+                  const SizedBox(height: 16),
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.medical_services,
+                            size: 32,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(child: Text(_tabs[_tab])),
+                          const Icon(Icons.chevron_right),
+                        ],
+                      ),
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(child: Text(_tabs[_tab])),
-                    const Icon(Icons.chevron_right),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ),
-          ],
-        ),
       ),
     ),
     bottomNavigationBar: NavigationBar(

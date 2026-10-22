@@ -2,21 +2,10 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class Session extends ChangeNotifier {
-  Session()
-    : _http = Dio(
-        BaseOptions(
-          baseUrl: _baseUrl,
-          connectTimeout: const Duration(seconds: 10),
-        ),
-      );
+import 'api.dart';
 
-  static const _override = String.fromEnvironment('API_BASE');
-  static String get _baseUrl => _override.isNotEmpty
-      ? _override
-      : kIsWeb || defaultTargetPlatform == TargetPlatform.iOS
-      ? 'http://localhost:3000'
-      : 'http://10.0.2.2:3000';
+class Session extends ChangeNotifier {
+  Session() : _http = Api.instance.client;
 
   static const _tokenKey = 'accessToken';
   static const _roleKey = 'role';
