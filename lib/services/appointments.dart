@@ -44,6 +44,21 @@ class Appointments {
     await _api.post('/$path/$id', data: data ?? {});
   }
 
+  Future<List<Map<String, dynamic>>> doctors() async =>
+      (await Api.instance.list('/doctor/list')).cast<Map<String, dynamic>>();
+
+  Future<List<String>> availability(int doctorId, DateTime date) async {
+    final response = await _api.get<List<dynamic>>(
+      '/doctor/availability',
+      queryParameters: {
+        'doctorId': doctorId,
+        'date':
+            '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}',
+      },
+    );
+    return (response.data ?? []).cast<String>();
+  }
+
   Future<void> patientCancel(int id, String reason) async =>
       statusAction('patient/cancel-appointment', id, data: {'reason': reason});
 }

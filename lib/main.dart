@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import 'services/session.dart';
 import 'screens/appointments_screen.dart';
+import 'screens/book_appointment_screen.dart';
 
 void main() {
   runApp(
@@ -249,6 +250,21 @@ class _RoleHomeState extends State<RoleHome> {
           NavigationDestination(icon: Icon(_iconFor(index)), label: label),
       ],
     ),
+    floatingActionButton: widget.role == 'patient' && _tab == 0
+        ? FloatingActionButton.extended(
+            onPressed: () async {
+              final created = await Navigator.push<bool>(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const BookAppointmentScreen(),
+                ),
+              );
+              if (created == true && mounted) setState(() {});
+            },
+            icon: const Icon(Icons.add),
+            label: const Text('Đặt lịch'),
+          )
+        : null,
   );
 
   IconData _iconFor(int index) => switch (index) {
