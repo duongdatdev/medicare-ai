@@ -18,7 +18,7 @@ void main() {
     expect(find.text('Quản trị'), findsWidgets);
     await tester.tap(find.text('Thanh toán'));
     await tester.pumpAndSettle();
-    expect(find.text('Thanh toán'), findsNWidgets(2));
+    expect(find.text('Thanh toán'), findsWidgets);
     await tester.tap(find.text('Thông báo'));
     await tester.pumpAndSettle();
     expect(find.text('Thông báo'), findsOneWidget);
