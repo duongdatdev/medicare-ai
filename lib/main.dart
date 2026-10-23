@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'services/session.dart';
 import 'screens/appointments_screen.dart';
 import 'screens/book_appointment_screen.dart';
+import 'screens/admin_overview.dart';
 
 void main() {
   runApp(
@@ -211,8 +212,10 @@ class _RoleHomeState extends State<RoleHome> {
     body: Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 720),
-        child: _tab == 0 && widget.role != 'admin'
-            ? AppointmentsScreen(doctor: widget.role == 'doctor')
+        child: _tab == 0
+            ? widget.role == 'admin'
+                  ? const AdminOverview()
+                  : AppointmentsScreen(doctor: widget.role == 'doctor')
             : ListView(
                 padding: const EdgeInsets.all(20),
                 children: [

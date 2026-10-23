@@ -28,8 +28,9 @@ class Api {
 
   Future<List<dynamic>> list(String path) async {
     final response = await client.get(path);
-    if (response.data is! List)
+    if (response.data is! List) {
       throw const FormatException('Danh sách không hợp lệ');
+    }
     return response.data as List<dynamic>;
   }
 }

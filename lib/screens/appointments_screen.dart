@@ -69,14 +69,15 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
               );
             }
             final items = snapshot.data ?? [];
-            if (items.isEmpty)
+            if (items.isEmpty) {
               return const Center(child: Text('Chưa có lịch hẹn'));
+            }
             return RefreshIndicator(
               onRefresh: () async => setState(_reload),
               child: ListView.separated(
                 padding: const EdgeInsets.all(16),
                 itemCount: items.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 8),
+                separatorBuilder: (context, index) => const SizedBox(height: 8),
                 itemBuilder: (context, index) => _AppointmentCard(
                   appointment: items[index],
                   doctor: widget.doctor,
