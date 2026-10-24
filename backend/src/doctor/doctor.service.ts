@@ -4,6 +4,8 @@ import { Repository } from 'typeorm';
 import { Appointment } from '../patient/appointment.entity.js';
 import { Doctor } from './doctor.entity.js';
 import { ShiftAssignment } from './shift-assignment.entity.js';
+import { Shift } from './shift.entity.js';
+import { BadRequestException } from '@nestjs/common';
 
 @Injectable()
 export class DoctorService {
@@ -11,10 +13,33 @@ export class DoctorService {
     @InjectRepository(Doctor) private readonly doctors: Repository<Doctor>,
     @InjectRepository(Appointment) private readonly appointments: Repository<Appointment>,
     @InjectRepository(ShiftAssignment) private readonly assignments: Repository<ShiftAssignment>,
+    @InjectRepository(Shift) private readonly shifts: Repository<Shift>,
   ) {}
 
   list() {
     return this.doctors.find({ order: { name: 'ASC' } });
+  }
+
+  shiftTemplates() {
+    return this.shifts.find({ order: { startTime: 'ASC' } });
+  }
+
+  async registerShift(doctorId: number, shiftId: number, date: string) {
+    const shift = await this.shifts.findOneBy({ id: shiftId });
+    if (!shift) throw new NotFoundException('Không tìm thấy ca trực');
+    const shiftDate = new Date(`${date}T00:00:00+07:00`);
+    if (!Number.isFinite(shiftDate.getTime()) || shiftDate <= new Date()) {
+      throw new BadRequestException('Ngày đăng ký phải ở tương lai');
+    }
+    const startTime = new Date(`${date}T${shift.startTime}+07:00`);
+    const endTime = new Date(`${date}T${shift.endTime}+07:00`);
+    const duplicate = await this.assignments.findOneBy({ doctorId, shiftId, startTime });
+    if (duplicate) throw new ConflictException('Ca trực đã đăng ký');
+    const assigned = await this.assignments.count({ where: { shiftId, startTime, status: 'ACTIVE' } });
+    if (assigned >= 4) throw new ConflictException('Ca trực đã đủ bác sĩ');
+    return this.assignments.save(this.assignments.create({
+      type: shift.type, startTime, endTime, status: 'ACTIVE', duration: 0, doctorId, shiftId,
+    }));
   }
 
   async listAppointments(doctorId: number, status: number) {

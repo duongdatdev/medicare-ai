@@ -21,6 +21,17 @@ export class DoctorController {
   }
 
   @Roles('doctor')
+  @Get('shift-templates') templates() {
+    return this.doctors.shiftTemplates();
+  }
+
+  @Roles('doctor')
+  @Post('register-shift')
+  registerShift(@CurrentUser() user: { doctorId: number }, @Body() input: { shiftId: number; date: string }) {
+    return this.doctors.registerShift(user.doctorId, input.shiftId, input.date);
+  }
+
+  @Roles('doctor')
   @Get('list-unAcpappointment')
   pending(@CurrentUser() user: { doctorId: number }) {
     return this.doctors.listAppointments(user.doctorId, 1);

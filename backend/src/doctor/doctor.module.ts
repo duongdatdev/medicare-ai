@@ -5,9 +5,10 @@ import { Doctor } from './doctor.entity.js';
 import { DoctorController } from './doctor.controller.js';
 import { DoctorService } from './doctor.service.js';
 import { ShiftAssignment } from './shift-assignment.entity.js';
+import { Shift } from './shift.entity.js';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Doctor, Appointment, ShiftAssignment])],
+  imports: [TypeOrmModule.forFeature([Doctor, Appointment, ShiftAssignment, Shift])],
   controllers: [DoctorController],
   providers: [DoctorService],
 })

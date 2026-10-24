@@ -10,7 +10,7 @@ describe('DoctorService availability', () => {
     const assignments = { find: vi.fn().mockResolvedValue([
       { startTime: new Date('2026-11-12T00:00:00Z'), endTime: new Date('2026-11-12T01:30:00Z'), status: 'ACTIVE' },
     ]) };
-    const service = new DoctorService({} as never, appointments as never, assignments as never);
+    const service = new DoctorService({} as never, appointments as never, assignments as never, {} as never);
 
     const result = await service.availability(4, '2026-11-12');
 
