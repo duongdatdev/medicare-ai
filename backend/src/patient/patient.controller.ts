@@ -2,7 +2,7 @@ import { Body, Controller, Get, Param, ParseIntPipe, Post, Put } from '@nestjs/c
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { CurrentUser, Roles } from '../auth/auth.decorators.js';
 import { Appointment } from './appointment.entity.js';
-import { CancelAppointmentDto, CreateAppointmentDto } from './appointment.dto.js';
+import { CancelAppointmentDto, CreateAppointmentDto, RescheduleAppointmentDto } from './appointment.dto.js';
 import { PatientService } from './patient.service.js';
 
 @ApiTags('patient')
@@ -35,5 +35,9 @@ export class PatientController {
 
   @Post('cancel-appointment/:id') cancel(@CurrentUser() user: { patientId: number }, @Param('id', ParseIntPipe) id: number, @Body() input: CancelAppointmentDto) {
     return this.patients.cancelAppointment(user.patientId, id, input.reason);
+  }
+
+  @Put('reschedule-appointment/:id') reschedule(@CurrentUser() user: { patientId: number }, @Param('id', ParseIntPipe) id: number, @Body() input: RescheduleAppointmentDto) {
+    return this.patients.rescheduleAppointment(user.patientId, id, input);
   }
 }

@@ -4,6 +4,7 @@ import { QueryFailedError, Repository } from 'typeorm';
 import { Patient } from './patient.entity.js';
 import { Appointment } from './appointment.entity.js';
 import { CreateAppointmentDto } from './appointment.dto.js';
+import { RescheduleAppointmentDto } from './appointment.dto.js';
 
 @Injectable()
 export class PatientService {
@@ -64,6 +65,26 @@ export class PatientService {
     if (appointment.confirmCondition === 2) throw new ConflictException('Lịch đã khám xong');
     appointment.cancelReason = reason;
     appointment.canceledBy = 'patient';
+    return this.appointments.save(appointment);
+  }
+
+  async rescheduleAppointment(patientId: number, id: number, changes: RescheduleAppointmentDto) {
+    const appointment = await this.getAppointment(patientId, id);
+    if (appointment.rescheduled || appointment.cancelReason || appointment.confirmCondition === 2) {
+      throw new ConflictException('Lịch không thể đổi thêm');
+    }
+    const available = await this.appointments.manager.query(
+      `SELECT 1 FROM "shiftAssignment" s WHERE s."doctorId" = $1 AND s."status" = 'ACTIVE'
+       AND s."startTime" <= $2 AND s."endTime" >= $2::timestamp + interval '30 minutes'
+       AND NOT EXISTS (SELECT 1 FROM "appointment" a WHERE a."doctorId" = $1 AND a."apTime" = $2
+       AND a."cancelReason" IS NULL AND a."id" <> $3) LIMIT 1`,
+      [appointment.doctorId, changes.apTime, id],
+    );
+    if (!available.length) throw new ConflictException('Khung giờ không còn trống');
+    appointment.apTime = new Date(changes.apTime);
+    appointment.rescheduled = true;
+    if (changes.note !== undefined) appointment.note = changes.note;
+    if (appointment.confirmCondition === 0) appointment.confirmCondition = 1;
     return this.appointments.save(appointment);
   }
 }
