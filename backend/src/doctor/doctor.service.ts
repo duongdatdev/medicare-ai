@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Appointment } from '../patient/appointment.entity.js';
@@ -15,6 +15,21 @@ export class DoctorService {
 
   list() {
     return this.doctors.find({ order: { name: 'ASC' } });
+  }
+
+  async listAppointments(doctorId: number, status: number) {
+    return this.appointments.find({ where: { doctorId, confirmCondition: status }, order: { apTime: 'ASC' } });
+  }
+
+  async confirmAppointment(doctorId: number, appointmentId: number, note?: string) {
+    const appointment = await this.appointments.findOneBy({ id: appointmentId });
+    if (!appointment) throw new NotFoundException();
+    if (appointment.doctorId !== doctorId) throw new ForbiddenException();
+    if (appointment.confirmCondition !== 1 || appointment.cancelReason) throw new ConflictException('Lịch không còn chờ xác nhận');
+    appointment.confirmCondition = 0;
+    appointment.confirmDate = new Date();
+    appointment.doctorNote = note ?? null;
+    return this.appointments.save(appointment);
   }
 
   async availability(doctorId: number, date: string) {

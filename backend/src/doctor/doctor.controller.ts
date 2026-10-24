@@ -1,5 +1,6 @@
-import { Controller, Get, Query, ParseIntPipe } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseIntPipe, Post, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { CurrentUser, Roles } from '../auth/auth.decorators.js';
 import { DoctorService } from './doctor.service.js';
 
 @ApiTags('doctor')
@@ -17,5 +18,29 @@ export class DoctorController {
     @Query('date') date: string,
   ) {
     return this.doctors.availability(doctorId, date);
+  }
+
+  @Roles('doctor')
+  @Get('list-unAcpappointment')
+  pending(@CurrentUser() user: { doctorId: number }) {
+    return this.doctors.listAppointments(user.doctorId, 1);
+  }
+
+  @Roles('doctor')
+  @Get('list-appointment')
+  confirmed(@CurrentUser() user: { doctorId: number }) {
+    return this.doctors.listAppointments(user.doctorId, 0);
+  }
+
+  @Roles('doctor')
+  @Get('list-completed')
+  completed(@CurrentUser() user: { doctorId: number }) {
+    return this.doctors.listAppointments(user.doctorId, 2);
+  }
+
+  @Roles('doctor')
+  @Post('confirm-appointment/:id')
+  confirm(@CurrentUser() user: { doctorId: number }, @Param('id', ParseIntPipe) id: number, @Body() body: { note?: string }) {
+    return this.doctors.confirmAppointment(user.doctorId, id, body.note);
   }
 }
