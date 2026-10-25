@@ -11,6 +11,7 @@ class DoctorShiftsScreen extends StatefulWidget {
 class _DoctorShiftsScreenState extends State<DoctorShiftsScreen> {
   late Future<List<dynamic>> _shifts;
   List<dynamic> _templates = [];
+  int? _selectedTemplateId;
   DateTime _date = DateTime.now().add(const Duration(days: 1));
   @override
   void initState() {
@@ -26,13 +27,13 @@ class _DoctorShiftsScreenState extends State<DoctorShiftsScreen> {
   }
 
   Future<void> _register() async {
-    if (_templates.isEmpty) return;
-    final shift = _templates.first as Map<String, dynamic>;
+    final shiftId = _selectedTemplateId;
+    if (shiftId == null) return;
     try {
       await Api.instance.client.post(
         '/doctor/register-shift',
         data: {
-          'shiftId': shift['id'],
+          'shiftId': shiftId,
           'date':
               '${_date.year}-${_date.month.toString().padLeft(2, '0')}-${_date.day.toString().padLeft(2, '0')}',
         },
@@ -71,17 +72,39 @@ class _DoctorShiftsScreenState extends State<DoctorShiftsScreen> {
     children: [
       Padding(
         padding: const EdgeInsets.all(12),
-        child: Row(
+        child: Column(
           children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: _chooseDate,
-                icon: const Icon(Icons.calendar_month),
-                label: Text('${_date.day}/${_date.month}/${_date.year}'),
-              ),
+            DropdownButtonFormField<int>(
+              initialValue: _selectedTemplateId,
+              decoration: const InputDecoration(labelText: 'Loại ca'),
+              items: [
+                for (final template in _templates)
+                  DropdownMenuItem<int>(
+                    value: (template['id'] as num).toInt(),
+                    child: Text(
+                      '${template['type']} · ${template['startTime']}–${template['endTime']}',
+                    ),
+                  ),
+              ],
+              onChanged: (value) => setState(() => _selectedTemplateId = value),
             ),
-            const SizedBox(width: 8),
-            FilledButton(onPressed: _register, child: const Text('Đăng ký ca')),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _chooseDate,
+                    icon: const Icon(Icons.calendar_month),
+                    label: Text('${_date.day}/${_date.month}/${_date.year}'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                FilledButton(
+                  onPressed: _selectedTemplateId == null ? null : _register,
+                  child: const Text('Đăng ký ca'),
+                ),
+              ],
+            ),
           ],
         ),
       ),
