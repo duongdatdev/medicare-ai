@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/appointment.dart';
 import '../services/appointments.dart';
+import 'appointment_detail_screen.dart';
 
 class AppointmentsScreen extends StatefulWidget {
   const AppointmentsScreen({required this.doctor, super.key});
@@ -162,49 +163,63 @@ class _AppointmentCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Card(
-    child: Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.event_available_outlined),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  appointment.name ?? 'Lịch khám #${appointment.id}',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-              ),
-              Chip(label: Text(_status)),
-            ],
+    child: InkWell(
+      onTap: () async {
+        final changed = await Navigator.push<bool>(
+          context,
+          MaterialPageRoute(
+            builder: (_) => AppointmentDetailScreen(
+              appointment: appointment,
+              doctor: doctor,
+            ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            appointment.time?.toLocal().toString().substring(0, 16) ??
-                'Chưa có thời gian',
-          ),
-          if (appointment.address.isNotEmpty) Text(appointment.address),
-          if (appointment.note != null) Text(appointment.note!),
-          if (appointment.status == 1 && appointment.note == null)
-            Wrap(
-              spacing: 8,
+        );
+        if (changed == true) refresh();
+      },
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               children: [
-                if (doctor)
-                  TextButton.icon(
-                    onPressed: () => _act(context, 'confirm'),
-                    icon: const Icon(Icons.check),
-                    label: const Text('Xác nhận'),
+                const Icon(Icons.event_available_outlined),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    appointment.name ?? 'Lịch khám #${appointment.id}',
+                    style: Theme.of(context).textTheme.titleMedium,
                   ),
-                TextButton.icon(
-                  onPressed: () => _act(context, 'cancel'),
-                  icon: const Icon(Icons.cancel_outlined),
-                  label: const Text('Hủy lịch'),
                 ),
+                Chip(label: Text(_status)),
               ],
             ),
-        ],
+            const SizedBox(height: 8),
+            Text(
+              appointment.time?.toLocal().toString().substring(0, 16) ??
+                  'Chưa có thời gian',
+            ),
+            if (appointment.address.isNotEmpty) Text(appointment.address),
+            if (appointment.note != null) Text(appointment.note!),
+            if (appointment.status == 1 && appointment.note == null)
+              Wrap(
+                spacing: 8,
+                children: [
+                  if (doctor)
+                    TextButton.icon(
+                      onPressed: () => _act(context, 'confirm'),
+                      icon: const Icon(Icons.check),
+                      label: const Text('Xác nhận'),
+                    ),
+                  TextButton.icon(
+                    onPressed: () => _act(context, 'cancel'),
+                    icon: const Icon(Icons.cancel_outlined),
+                    label: const Text('Hủy lịch'),
+                  ),
+                ],
+              ),
+          ],
+        ),
       ),
     ),
   );

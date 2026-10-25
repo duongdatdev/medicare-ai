@@ -61,4 +61,18 @@ class Appointments {
 
   Future<void> patientCancel(int id, String reason) async =>
       statusAction('patient/cancel-appointment', id, data: {'reason': reason});
+
+  Future<Map<String, dynamic>> detail(int id, {required bool doctor}) async {
+    final response = await _api.get<Map<String, dynamic>>(
+      '/${doctor ? 'doctor' : 'patient'}/appointment/$id',
+    );
+    return response.data ?? const {};
+  }
+
+  Future<void> reschedule(int id, DateTime time, {required bool doctor}) async {
+    await _api.put(
+      '/${doctor ? 'doctor' : 'patient'}/reschedule-appointment/$id',
+      data: {'apTime': time.toIso8601String()},
+    );
+  }
 }
