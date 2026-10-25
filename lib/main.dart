@@ -5,6 +5,8 @@ import 'services/session.dart';
 import 'screens/appointments_screen.dart';
 import 'screens/book_appointment_screen.dart';
 import 'screens/admin_overview.dart';
+import 'screens/patient_profile_screen.dart';
+import 'screens/doctor_shifts_screen.dart';
 
 void main() {
   runApp(
@@ -216,6 +218,10 @@ class _RoleHomeState extends State<RoleHome> {
             ? widget.role == 'admin'
                   ? const AdminOverview()
                   : AppointmentsScreen(doctor: widget.role == 'doctor')
+            : widget.role == 'patient' && _tab == 2
+            ? const PatientProfileScreen()
+            : widget.role == 'doctor' && _tab == 1
+            ? const DoctorShiftsScreen()
             : ListView(
                 padding: const EdgeInsets.all(20),
                 children: [
