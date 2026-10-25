@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/appointment.dart';
 import '../services/appointments.dart';
 import 'appointment_detail_screen.dart';
+import 'complete_appointment_dialog.dart';
 
 class AppointmentsScreen extends StatefulWidget {
   const AppointmentsScreen({required this.doctor, super.key});
@@ -118,6 +119,14 @@ class _AppointmentCard extends StatelessWidget {
           appointment.id,
           data: {'confirmDate': DateTime.now().toIso8601String(), 'note': ''},
         );
+      } else if (action == 'complete') {
+        final diseaseIds = await showCompleteAppointmentDialog(context);
+        if (diseaseIds == null || diseaseIds.isEmpty) return;
+        await service.statusAction(
+          'doctor/complete',
+          appointment.id,
+          data: {'diseaseIds': diseaseIds},
+        );
       } else {
         final reason = await _askReason(context);
         if (reason == null || reason.trim().isEmpty) return;
@@ -217,6 +226,12 @@ class _AppointmentCard extends StatelessWidget {
                     label: const Text('Hủy lịch'),
                   ),
                 ],
+              ),
+            if (doctor && appointment.status == 0)
+              FilledButton.tonalIcon(
+                onPressed: () => _act(context, 'complete'),
+                icon: const Icon(Icons.medical_services_outlined),
+                label: const Text('Chẩn đoán và hoàn tất khám'),
               ),
           ],
         ),
