@@ -2,6 +2,7 @@ import { Body, Controller, Get, Param, ParseIntPipe, Post, Query } from '@nestjs
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { CurrentUser, Roles } from '../auth/auth.decorators.js';
 import { DoctorService } from './doctor.service.js';
+import { CompleteAppointmentDto } from './doctor.dto.js';
 
 @ApiTags('doctor')
 @ApiBearerAuth()
@@ -53,5 +54,11 @@ export class DoctorController {
   @Post('confirm-appointment/:id')
   confirm(@CurrentUser() user: { doctorId: number }, @Param('id', ParseIntPipe) id: number, @Body() body: { note?: string }) {
     return this.doctors.confirmAppointment(user.doctorId, id, body.note);
+  }
+
+  @Roles('doctor')
+  @Post('complete/:id')
+  complete(@CurrentUser() user: { doctorId: number }, @Param('id', ParseIntPipe) id: number, @Body() input: CompleteAppointmentDto) {
+    return this.doctors.completeAppointment(user.doctorId, id, input);
   }
 }

@@ -1,11 +1,15 @@
 import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Appointment } from '../patient/appointment.entity.js';
 import { Doctor } from './doctor.entity.js';
 import { ShiftAssignment } from './shift-assignment.entity.js';
 import { Shift } from './shift.entity.js';
 import { BadRequestException } from '@nestjs/common';
+import { Disease } from '../disease/disease.entity.js';
+import { AppointmentItem } from '../patient/appointment-item.entity.js';
+import { calcBill } from '../billing/billing.util.js';
+import { CompleteAppointmentDto } from './doctor.dto.js';
 
 @Injectable()
 export class DoctorService {
@@ -14,6 +18,7 @@ export class DoctorService {
     @InjectRepository(Appointment) private readonly appointments: Repository<Appointment>,
     @InjectRepository(ShiftAssignment) private readonly assignments: Repository<ShiftAssignment>,
     @InjectRepository(Shift) private readonly shifts: Repository<Shift>,
+    @InjectRepository(Disease) private readonly diseases: Repository<Disease>,
   ) {}
 
   list() {
@@ -55,6 +60,34 @@ export class DoctorService {
     appointment.confirmDate = new Date();
     appointment.doctorNote = note ?? null;
     return this.appointments.save(appointment);
+  }
+
+  async completeAppointment(doctorId: number, appointmentId: number, input: CompleteAppointmentDto) {
+    if (new Set(input.diseaseIds).size !== input.diseaseIds.length) {
+      throw new ConflictException('Chẩn đoán bị trùng');
+    }
+    return this.appointments.manager.transaction(async (manager) => {
+      const appointment = await manager.findOne(Appointment, { where: { id: appointmentId }, lock: { mode: 'pessimistic_write' } });
+      if (!appointment) throw new NotFoundException();
+      if (appointment.doctorId !== doctorId) throw new ForbiddenException();
+      if (appointment.confirmCondition !== 0 || appointment.cancelReason) throw new ConflictException('Lịch chưa xác nhận hoặc đã hủy');
+      const diseases = await manager.findBy(Disease, { id: In(input.diseaseIds), active: true });
+      if (!input.diseaseIds.length || diseases.length !== input.diseaseIds.length) throw new BadRequestException('Danh sách chẩn đoán không hợp lệ');
+      const fee = Number(process.env.EXAM_FEE ?? 50000);
+      const bill = calcBill(fee, true, diseases.map((disease) => ({ price: disease.price, bhytCovered: disease.bhytCovered })), null, appointment.apTime);
+      appointment.confirmCondition = 2;
+      appointment.examFee = bill.examFee;
+      appointment.examFeeCovered = bill.examFeeCovered;
+      appointment.total = bill.total;
+      appointment.insuranceRate = bill.insuranceRate;
+      appointment.insuranceCovered = bill.insuranceCovered;
+      appointment.payable = bill.payable;
+      await manager.save(appointment);
+      await manager.save(AppointmentItem, diseases.map((disease) => ({
+        name: disease.name, price: disease.price, bhytCovered: disease.bhytCovered, appointmentId,
+      })));
+      return { ...appointment, items: diseases.map(({ name, price, bhytCovered }) => ({ name, price, bhytCovered })), ...bill };
+    });
   }
 
   async availability(doctorId: number, date: string) {

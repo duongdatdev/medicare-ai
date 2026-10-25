@@ -1,5 +1,6 @@
-import { Column, Entity, ManyToOne, PrimaryGeneratedColumn, JoinColumn } from 'typeorm';
+import { Column, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn, JoinColumn } from 'typeorm';
 import { Patient } from './patient.entity.js';
+import { AppointmentItem } from './appointment-item.entity.js';
 
 @Entity('appointment')
 export class Appointment {
@@ -16,6 +17,14 @@ export class Appointment {
   @Column() doctorName: string;
   @Column() patientId: number;
   @Column() doctorId: number;
+  @Column({ type: 'int', nullable: true }) examFee: number | null;
+  @Column({ type: 'int', nullable: true }) total: number | null;
+  @Column({ type: 'real', nullable: true }) insuranceRate: number | null;
+  @Column({ type: 'int', nullable: true }) insuranceCovered: number | null;
+  @Column({ type: 'int', nullable: true }) payable: number | null;
+  @Column({ type: 'boolean', nullable: true }) examFeeCovered: boolean | null;
+  @OneToMany(() => AppointmentItem, (item) => item.appointment)
+  items: AppointmentItem[];
   @ManyToOne(() => Patient)
   @JoinColumn({ name: 'patientId' }) patient: Patient;
 }
