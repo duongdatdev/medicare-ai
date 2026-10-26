@@ -23,6 +23,10 @@ export class Appointment {
   @Column({ type: 'int', nullable: true }) insuranceCovered: number | null;
   @Column({ type: 'int', nullable: true }) payable: number | null;
   @Column({ type: 'boolean', nullable: true }) examFeeCovered: boolean | null;
+  @Column({ type: 'varchar', nullable: true }) paymentMethod: 'cash' | 'qr' | null;
+  @Column({ default: 'unpaid' }) paymentStatus: 'unpaid' | 'pending' | 'paid';
+  @Column({ type: 'timestamp', nullable: true }) paidAt: Date | null;
+  @Column({ type: 'int', nullable: true }) paidBy: number | null;
   @OneToMany(() => AppointmentItem, (item) => item.appointment)
   items: AppointmentItem[];
   @ManyToOne(() => Patient)

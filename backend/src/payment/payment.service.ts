@@ -1,0 +1,79 @@
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException, ServiceUnavailableException, UnauthorizedException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { InjectRepository } from '@nestjs/typeorm';
+import { timingSafeEqual } from 'node:crypto';
+import { IsNull, Repository } from 'typeorm';
+import { Appointment } from '../patient/appointment.entity.js';
+import { buildVietQr } from '../billing/vietqr.util.js';
+import { Notification } from './notification.entity.js';
+import { PayAppointmentDto, SepayWebhookDto } from './payment.dto.js';
+
+@Injectable()
+export class PaymentService {
+  constructor(
+    @InjectRepository(Appointment) private readonly appointments: Repository<Appointment>,
+    @InjectRepository(Notification) private readonly notifications: Repository<Notification>,
+    private readonly config: ConfigService,
+  ) {}
+
+  async pay(patientId: number, appointmentId: number, { method }: PayAppointmentDto) {
+    const appointment = await this.appointments.findOneBy({ id: appointmentId });
+    if (!appointment) throw new NotFoundException();
+    if (appointment.patientId !== patientId) throw new ForbiddenException();
+    if (appointment.confirmCondition !== 2 || appointment.payable === null) throw new BadRequestException('Lịch chưa có hóa đơn');
+    if (appointment.paymentStatus === 'paid' || appointment.paymentStatus === 'pending') throw new BadRequestException('Lịch không thể thanh toán lại');
+    if (appointment.payable <= 0) throw new BadRequestException('Không cần thanh toán');
+    let qr: object | undefined;
+    if (method === 'qr') {
+      const bin = this.config.get<string>('PAYMENT_BANK_BIN');
+      const accountNo = this.config.get<string>('PAYMENT_ACCOUNT_NO');
+      if (!bin || !accountNo) throw new ServiceUnavailableException('Chưa cấu hình tài khoản nhận');
+      const content = `DACN${appointment.id}`;
+      qr = { payload: buildVietQr({ bin, accountNo, amount: appointment.payable, content }), bankName: this.config.get('PAYMENT_BANK_NAME', bin), accountNo, accountName: this.config.get('PAYMENT_ACCOUNT_NAME', ''), amount: appointment.payable, content };
+    }
+    appointment.paymentMethod = method;
+    appointment.paymentStatus = 'pending';
+    await this.appointments.save(appointment);
+    return { paymentStatus: 'pending', paymentMethod: method, ...(qr ? { qr } : {}) };
+  }
+
+  assertWebhookKey(header: string | undefined) {
+    const expected = this.config.get<string>('SEPAY_API_KEY');
+    if (!expected) throw new ServiceUnavailableException('Webhook chưa cấu hình');
+    const supplied = header?.replace(/^Apikey\s+/i, '') ?? '';
+    const left = Buffer.from(expected);
+    const right = Buffer.from(supplied);
+    if (left.length !== right.length || !timingSafeEqual(left, right)) throw new UnauthorizedException();
+  }
+
+  async handleWebhook(input: SepayWebhookDto) {
+    if (input.transferType !== 'in') return { success: true };
+    const match = input.content.match(/DACN(\d+)/);
+    const appointment = match ? await this.appointments.findOneBy({ id: Number(match[1]) }) : null;
+    if (appointment && appointment.paymentStatus === 'pending' && appointment.paymentMethod === 'qr' && appointment.payable === input.amount) {
+      appointment.paymentStatus = 'paid';
+      appointment.paidAt = new Date();
+      await this.appointments.save(appointment);
+    } else {
+      await this.notifications.save(this.notifications.create({ title: 'Giao dịch cần kiểm tra', body: `SePay ${input.id}: ${input.amount} VND (${input.content})`, appointmentId: appointment?.id ?? null, readAt: null }));
+    }
+    return { success: true };
+  }
+
+  pendingPayments() {
+    return this.appointments.find({ where: { paymentStatus: 'pending', cancelReason: IsNull() }, order: { apTime: 'DESC' }, take: 100 });
+  }
+
+  async confirm(adminId: number, id: number) {
+    const appointment = await this.appointments.findOneBy({ id });
+    if (!appointment) throw new NotFoundException();
+    if (appointment.paymentStatus !== 'pending') throw new BadRequestException('Lịch không chờ xác nhận');
+    appointment.paymentStatus = 'paid'; appointment.paidAt = new Date(); appointment.paidBy = adminId;
+    await this.appointments.save(appointment);
+    return { id, paymentStatus: 'paid' };
+  }
+
+  notificationsList() { return this.notifications.find({ order: { createdAt: 'DESC' }, take: 100 }); }
+  async unreadCount() { return { count: await this.notifications.countBy({ readAt: IsNull() }) }; }
+  async readAll() { await this.notifications.update({ readAt: IsNull() }, { readAt: new Date() }); return { ok: true }; }
+}
