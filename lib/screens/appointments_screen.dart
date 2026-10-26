@@ -4,6 +4,7 @@ import '../models/appointment.dart';
 import '../services/appointments.dart';
 import 'appointment_detail_screen.dart';
 import 'complete_appointment_dialog.dart';
+import 'payment_screen.dart';
 
 class AppointmentsScreen extends StatefulWidget {
   const AppointmentsScreen({required this.doctor, super.key});
@@ -232,6 +233,18 @@ class _AppointmentCard extends StatelessWidget {
                 onPressed: () => _act(context, 'complete'),
                 icon: const Icon(Icons.medical_services_outlined),
                 label: const Text('Chẩn đoán và hoàn tất khám'),
+              ),
+            if (!doctor && appointment.status == 2)
+              OutlinedButton.icon(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        PaymentScreen(appointmentId: appointment.id),
+                  ),
+                ).then((_) => refresh()),
+                icon: const Icon(Icons.receipt_long),
+                label: const Text('Xem hóa đơn / thanh toán'),
               ),
           ],
         ),
