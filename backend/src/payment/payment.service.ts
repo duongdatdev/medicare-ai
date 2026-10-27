@@ -6,6 +6,7 @@ import { IsNull, Repository } from 'typeorm';
 import { Appointment } from '../patient/appointment.entity.js';
 import { buildVietQr } from '../billing/vietqr.util.js';
 import { Notification } from './notification.entity.js';
+import { PaymentTransaction } from './payment-transaction.entity.js';
 import { PayAppointmentDto, SepayWebhookDto } from './payment.dto.js';
 
 @Injectable()
@@ -13,6 +14,7 @@ export class PaymentService {
   constructor(
     @InjectRepository(Appointment) private readonly appointments: Repository<Appointment>,
     @InjectRepository(Notification) private readonly notifications: Repository<Notification>,
+    @InjectRepository(PaymentTransaction) private readonly transactions: Repository<PaymentTransaction>,
     private readonly config: ConfigService,
   ) {}
 
@@ -48,15 +50,29 @@ export class PaymentService {
 
   async handleWebhook(input: SepayWebhookDto) {
     if (input.transferType !== 'in') return { success: true };
-    const match = input.content.match(/DACN(\d+)/);
-    const appointment = match ? await this.appointments.findOneBy({ id: Number(match[1]) }) : null;
-    if (appointment && appointment.paymentStatus === 'pending' && appointment.paymentMethod === 'qr' && appointment.payable === input.amount) {
-      appointment.paymentStatus = 'paid';
-      appointment.paidAt = new Date();
-      await this.appointments.save(appointment);
-    } else {
-      await this.notifications.save(this.notifications.create({ title: 'Giao dịch cần kiểm tra', body: `SePay ${input.id}: ${input.amount} VND (${input.content})`, appointmentId: appointment?.id ?? null, readAt: null }));
-    }
+    await this.transactions.manager.transaction(async (manager) => {
+      const inserted = await manager.query(
+        `INSERT INTO "payment_transaction" ("sepayId", "content", "transferAmount") VALUES ($1, $2, $3) ON CONFLICT ("sepayId") DO NOTHING RETURNING "id"`,
+        [String(input.id), input.content, input.transferAmount],
+      );
+      if (!inserted.length) return;
+      const match = input.content.match(/^DACN(\d+)(?:\s|$)/i);
+      const appointment = match
+        ? await manager.findOne(Appointment, { where: { id: Number(match[1]) }, lock: { mode: 'pessimistic_write' } })
+        : null;
+      if (appointment && appointment.paymentStatus === 'pending' && appointment.paymentMethod === 'qr' && appointment.payable === input.transferAmount) {
+        appointment.paymentStatus = 'paid';
+        appointment.paidAt = new Date();
+        await manager.save(appointment);
+        return;
+      }
+      await manager.save(Notification, manager.create(Notification, {
+        title: 'Giao dịch cần kiểm tra',
+        body: `SePay ${input.id}: ${input.transferAmount} VND (${input.content})`,
+        appointmentId: appointment?.id ?? null,
+        readAt: null,
+      }));
+    });
     return { success: true };
   }
 

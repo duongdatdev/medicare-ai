@@ -11,8 +11,14 @@ export class AddPayments1760400000000 implements MigrationInterface {
       "id" SERIAL PRIMARY KEY, "title" varchar NOT NULL, "body" text NOT NULL,
       "createdAt" timestamp NOT NULL DEFAULT now(), "readAt" timestamp, "appointmentId" integer
     )`);
+    await query.query(`CREATE TABLE "payment_transaction" (
+      "id" SERIAL PRIMARY KEY, "sepayId" varchar NOT NULL UNIQUE,
+      "content" varchar NOT NULL, "transferAmount" integer NOT NULL,
+      "createdAt" timestamp NOT NULL DEFAULT now()
+    )`);
   }
   async down(query: QueryRunner): Promise<void> {
+    await query.query('DROP TABLE "payment_transaction"');
     await query.query('DROP TABLE "notification"');
     await query.query(`ALTER TABLE "appointment" DROP COLUMN "paidBy", DROP COLUMN "paidAt", DROP COLUMN "paymentStatus", DROP COLUMN "paymentMethod"`);
   }
