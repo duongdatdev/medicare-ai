@@ -5,18 +5,25 @@
 // gestures. You can also use WidgetTester to find child widgets in the widget
 // tree, read text, and verify that the values of widget properties are correct.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
 
 import 'package:dacn_app/main.dart';
+import 'package:dacn_app/services/session.dart';
 
 void main() {
-  testWidgets('admin navigation shows payment and notification sections', (
-    tester,
-  ) async {
-    await tester.pumpWidget(const MaterialApp(home: RoleHome(role: 'admin')));
-    expect(find.text('Quản trị'), findsWidgets);
-    expect(find.text('Thanh toán'), findsWidgets);
-    expect(find.text('Thông báo'), findsWidgets);
+  testWidgets('signed-out users see the API login form', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    await tester.pumpWidget(
+      ChangeNotifierProvider(
+        create: (_) => Session()..restore(),
+        child: const DacnApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Đăng nhập'), findsOneWidget);
+    expect(find.text('Email'), findsOneWidget);
+    expect(find.text('Mật khẩu'), findsOneWidget);
   });
 }
