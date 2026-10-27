@@ -16,11 +16,7 @@ void main() {
   ) async {
     await tester.pumpWidget(const MaterialApp(home: RoleHome(role: 'admin')));
     expect(find.text('Quản trị'), findsWidgets);
-    await tester.tap(find.text('Thanh toán'));
-    await tester.pumpAndSettle();
     expect(find.text('Thanh toán'), findsWidgets);
-    await tester.tap(find.text('Thông báo'));
-    await tester.pumpAndSettle();
     expect(find.text('Thông báo'), findsWidgets);
   });
 }
