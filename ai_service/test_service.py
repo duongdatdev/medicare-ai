@@ -4,9 +4,37 @@ from fastapi.testclient import TestClient
 from PIL import Image
 
 from ai_service import app as service
+from ai_service.symptom_analyzer import _load_classes
 
 
 client = TestClient(service.app)
+
+
+def test_supported_disease_labels_match_checkpoint_contract():
+    assert _load_classes(service.SERVICE_DIR) == [
+        "Acne",
+        "Actinic Keratosis",
+        "Benign Tumors",
+        "Bullous",
+        "Candidiasis",
+        "Drug Eruption",
+        "Eczema",
+        "Infestations/Bites",
+        "Lichen",
+        "Lupus",
+        "Moles",
+        "Psoriasis",
+        "Rosacea",
+        "Seborrheic Keratoses",
+        "Skin Cancer",
+        "Sun/Sunlight Damage",
+        "Tinea",
+        "Unknown/Normal",
+        "Vascular Tumors",
+        "Vasculitis",
+        "Vitiligo",
+        "Warts",
+    ]
 
 
 def test_health_does_not_load_optional_model():
