@@ -8,6 +8,8 @@ import 'screens/admin_overview.dart';
 import 'screens/patient_profile_screen.dart';
 import 'screens/doctor_shifts_screen.dart';
 import 'screens/admin_payments_screen.dart';
+import 'screens/admin_notifications_screen.dart';
+import 'screens/news_feed_screen.dart';
 
 void main() {
   runApp(
@@ -191,7 +193,7 @@ class _RoleHomeState extends State<RoleHome> {
   List<String> get _tabs => switch (widget.role) {
     'doctor' => ['Lịch khám', 'Ca trực', 'Tài khoản'],
     'admin' => ['Quản trị', 'Thanh toán', 'Thông báo'],
-    _ => ['Trang chủ', 'Lịch hẹn', 'Hồ sơ'],
+    _ => ['Tin tức', 'Lịch hẹn', 'Hồ sơ'],
   };
 
   String get _roleName => switch (widget.role) {
@@ -215,7 +217,11 @@ class _RoleHomeState extends State<RoleHome> {
     body: Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 720),
-        child: _tab == 0
+        child: widget.role == 'patient' && _tab == 0
+            ? const NewsFeedScreen()
+            : widget.role == 'patient' && _tab == 1
+            ? const AppointmentsScreen(doctor: false)
+            : _tab == 0
             ? widget.role == 'admin'
                   ? const AdminOverview()
                   : AppointmentsScreen(doctor: widget.role == 'doctor')
@@ -225,6 +231,8 @@ class _RoleHomeState extends State<RoleHome> {
             ? const DoctorShiftsScreen()
             : widget.role == 'admin' && _tab == 1
             ? const AdminPaymentsScreen()
+            : widget.role == 'admin' && _tab == 2
+            ? const AdminNotificationsScreen()
             : ListView(
                 padding: const EdgeInsets.all(20),
                 children: [
@@ -262,7 +270,7 @@ class _RoleHomeState extends State<RoleHome> {
           NavigationDestination(icon: Icon(_iconFor(index)), label: label),
       ],
     ),
-    floatingActionButton: widget.role == 'patient' && _tab == 0
+    floatingActionButton: widget.role == 'patient' && _tab == 1
         ? FloatingActionButton.extended(
             onPressed: () async {
               final created = await Navigator.push<bool>(
