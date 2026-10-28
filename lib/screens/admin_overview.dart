@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../services/api.dart';
+import 'admin_diseases_screen.dart';
+import 'admin_news_screen.dart';
 
 class AdminOverview extends StatefulWidget {
   const AdminOverview({super.key});
@@ -92,6 +94,31 @@ class _AdminOverviewState extends State<AdminOverview> {
                   trailing: Text(_money(row['salary'])),
                 ),
               ),
+            const SizedBox(height: 16),
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.medical_information_outlined),
+                title: const Text('Bảng giá và dịch vụ khám'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const AdminDiseasesScreen(),
+                  ),
+                ),
+              ),
+            ),
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.newspaper_outlined),
+                title: const Text('Quản lý tin tức'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AdminNewsScreen()),
+                ),
+              ),
+            ),
           ],
         ),
       );
