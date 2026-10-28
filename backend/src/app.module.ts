@@ -11,9 +11,10 @@ import { PatientModule } from './patient/patient.module.js';
 import { DoctorModule } from './doctor/doctor.module.js';
 import { DiseaseModule } from './disease/disease.module.js';
 import { PaymentModule } from './payment/payment.module.js';
+import { NewsModule } from './news/news.module.js';
 
 @Module({
-  imports: [ConfigModule.forRoot({ isGlobal: true }), DatabaseModule, AuthModule, PatientModule, DoctorModule, DiseaseModule, PaymentModule],
+  imports: [ConfigModule.forRoot({ isGlobal: true }), DatabaseModule, AuthModule, PatientModule, DoctorModule, DiseaseModule, PaymentModule, NewsModule],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: JwtGuard }, { provide: APP_GUARD, useClass: RolesGuard }],
 })
