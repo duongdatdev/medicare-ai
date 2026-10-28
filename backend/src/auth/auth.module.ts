@@ -6,10 +6,12 @@ import { Account } from './account.entity.js';
 import { AuthController } from './auth.controller.js';
 import { AuthService } from './auth.service.js';
 import { Patient } from '../patient/patient.entity.js';
+import { BhytRegistry } from '../billing/bhyt-registry.entity.js';
+import { BhytService } from '../billing/bhyt.service.js';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Account, Patient]),
+    TypeOrmModule.forFeature([Account, Patient, BhytRegistry]),
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
@@ -19,7 +21,7 @@ import { Patient } from '../patient/patient.entity.js';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService],
+  providers: [AuthService, BhytService],
   exports: [JwtModule],
 })
 export class AuthModule {}
