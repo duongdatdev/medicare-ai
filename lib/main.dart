@@ -10,6 +10,7 @@ import 'screens/doctor_shifts_screen.dart';
 import 'screens/admin_payments_screen.dart';
 import 'screens/admin_notifications_screen.dart';
 import 'screens/news_feed_screen.dart';
+import 'screens/register_patient_screen.dart';
 
 void main() {
   runApp(
@@ -167,6 +168,15 @@ class _SignInScreenState extends State<SignInScreen> {
                               )
                             : const Text('Đăng nhập'),
                       ),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const RegisterPatientScreen(),
+                        ),
+                      ),
+                      child: const Text('Tạo tài khoản bệnh nhân'),
                     ),
                   ],
                 ),
