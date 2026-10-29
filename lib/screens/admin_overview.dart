@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../services/api.dart';
 import 'admin_diseases_screen.dart';
 import 'admin_news_screen.dart';
+import 'admin_doctor_form.dart';
 
 class AdminOverview extends StatefulWidget {
   const AdminOverview({super.key});
@@ -81,18 +82,60 @@ class _AdminOverviewState extends State<AdminOverview> {
               'Bác sĩ và lương',
               style: Theme.of(context).textTheme.titleLarge,
             ),
-            for (final row in data.salaries)
+            Align(
+              alignment: Alignment.centerRight,
+              child: FilledButton.icon(
+                onPressed: () =>
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const AdminDoctorForm(),
+                      ),
+                    ).then((saved) {
+                      if (saved == true && context.mounted) setState(_reload);
+                    }),
+                icon: const Icon(Icons.person_add_alt_1),
+                label: const Text('Thêm bác sĩ'),
+              ),
+            ),
+            for (final row in data.doctors)
               Card(
                 child: ListTile(
                   leading: const CircleAvatar(
                     child: Icon(Icons.person_outline),
                   ),
-                  title: Text(
-                    '${row['name'] ?? row['doctorName'] ?? 'Bác sĩ'}',
+                  title: Text('${row['name'] ?? 'Bác sĩ'}'),
+                  subtitle: Text(
+                    '${row['phone'] ?? ''} · ${row['email'] ?? ''}',
                   ),
-                  subtitle: Text('${row['totalHours'] ?? 0} giờ làm'),
-                  trailing: Text(_money(row['salary'])),
+                  trailing: IconButton(
+                    tooltip: 'Sửa bác sĩ',
+                    icon: const Icon(Icons.edit_outlined),
+                    onPressed: () =>
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => AdminDoctorForm(
+                              doctorId: (row['id'] as num).toInt(),
+                            ),
+                          ),
+                        ).then((saved) {
+                          if (saved == true && context.mounted) {
+                            setState(_reload);
+                          }
+                        }),
+                  ),
                 ),
+              ),
+            Text(
+              'Tổng giờ và lương',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            for (final row in data.salaries)
+              ListTile(
+                title: Text('${row['name'] ?? row['doctorName'] ?? 'Bác sĩ'}'),
+                subtitle: Text('${row['totalHours'] ?? 0} giờ'),
+                trailing: Text(_money(row['salary'])),
               ),
             const SizedBox(height: 16),
             Card(
