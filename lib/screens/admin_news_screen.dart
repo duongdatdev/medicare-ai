@@ -90,9 +90,10 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
       await Api.instance.client.post('/news', data: form);
       if (mounted) setState(_load);
     } catch (error) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text('$error')));
+      }
     }
   }
 
@@ -101,9 +102,10 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
       await Api.instance.client.delete('/news/$id');
       if (mounted) setState(_load);
     } catch (error) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text('$error')));
+      }
     }
   }
 
@@ -118,15 +120,17 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
     body: FutureBuilder<List<dynamic>>(
       future: _items,
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting)
+        if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
-        if (snapshot.hasError)
+        }
+        if (snapshot.hasError) {
           return Center(
             child: TextButton(
               onPressed: () => setState(_load),
               child: const Text('Tải lại tin tức'),
             ),
           );
+        }
         final items = snapshot.data ?? [];
         if (items.isEmpty) return const Center(child: Text('Chưa có tin tức'));
         return RefreshIndicator(

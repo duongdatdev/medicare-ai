@@ -45,10 +45,11 @@ class _PaymentScreenState extends State<PaymentScreen> {
         data: {'method': method},
       );
       final qr = response.data?['qr'] as Map<String, dynamic>?;
-      if (mounted)
+      if (mounted) {
         setState(() {
           if (qr != null) _data = {..._data, 'qr': qr};
         });
+      }
       await _reload();
     } catch (error) {
       if (mounted) setState(() => _error = '$error');

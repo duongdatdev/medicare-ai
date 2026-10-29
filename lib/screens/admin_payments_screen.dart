@@ -28,9 +28,10 @@ class _AdminPaymentsScreenState extends State<AdminPaymentsScreen> {
       await Api.instance.client.post('/admin/payments/$id/confirm');
       if (mounted) setState(_load);
     } catch (error) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text('$error')));
+      }
     }
   }
 
@@ -55,18 +56,21 @@ class _AdminPaymentsScreenState extends State<AdminPaymentsScreen> {
         child: FutureBuilder<List<dynamic>>(
           future: _items,
           builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting)
+            if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
-            if (snapshot.hasError)
+            }
+            if (snapshot.hasError) {
               return Center(
                 child: TextButton(
                   onPressed: () => setState(_load),
                   child: const Text('Tải lại'),
                 ),
               );
+            }
             final rows = snapshot.data ?? [];
-            if (rows.isEmpty)
+            if (rows.isEmpty) {
               return const Center(child: Text('Không có giao dịch'));
+            }
             return RefreshIndicator(
               onRefresh: () async => setState(_load),
               child: ListView(

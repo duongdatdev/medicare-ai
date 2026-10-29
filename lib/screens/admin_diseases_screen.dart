@@ -62,12 +62,13 @@ class _AdminDiseasesScreenState extends State<AdminDiseasesScreen> {
                 final amount = int.tryParse(price.text);
                 if (name.text.trim().isNotEmpty &&
                     amount != null &&
-                    amount >= 0)
+                    amount >= 0) {
                   Navigator.pop(context, {
                     'name': name.text.trim(),
                     'price': amount,
                     'bhytCovered': covered,
                   });
+                }
               },
               child: const Text('Lưu'),
             ),
@@ -79,18 +80,20 @@ class _AdminDiseasesScreenState extends State<AdminDiseasesScreen> {
     price.dispose();
     if (result == null) return;
     try {
-      if (item == null)
+      if (item == null) {
         await Api.instance.client.post('/diseases', data: result);
-      else
+      } else {
         await Api.instance.client.patch(
           '/diseases/${item['id']}',
           data: result,
         );
+      }
       if (mounted) setState(_load);
     } catch (error) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text('$error')));
+      }
     }
   }
 
@@ -105,15 +108,17 @@ class _AdminDiseasesScreenState extends State<AdminDiseasesScreen> {
     body: FutureBuilder<Map<String, dynamic>>(
       future: _data,
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting)
+        if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
-        if (snapshot.hasError)
+        }
+        if (snapshot.hasError) {
           return Center(
             child: TextButton(
               onPressed: () => setState(_load),
               child: const Text('Tải lại'),
             ),
           );
+        }
         final items = snapshot.data?['items'] as List<dynamic>? ?? [];
         return ListView(
           padding: const EdgeInsets.all(12),

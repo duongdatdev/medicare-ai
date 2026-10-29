@@ -40,9 +40,10 @@ class _DoctorShiftsScreenState extends State<DoctorShiftsScreen> {
       );
       if (mounted) setState(_reload);
     } catch (error) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text('$error')));
+      }
     }
   }
 
@@ -61,9 +62,10 @@ class _DoctorShiftsScreenState extends State<DoctorShiftsScreen> {
       await Api.instance.client.post('/doctor/cancel-assignment/$id');
       if (mounted) setState(_reload);
     } catch (error) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text('$error')));
+      }
     }
   }
 
@@ -112,18 +114,21 @@ class _DoctorShiftsScreenState extends State<DoctorShiftsScreen> {
         child: FutureBuilder<List<dynamic>>(
           future: _shifts,
           builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting)
+            if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
-            if (snapshot.hasError)
+            }
+            if (snapshot.hasError) {
               return Center(
                 child: TextButton(
                   onPressed: () => setState(_reload),
                   child: const Text('Tải lại ca trực'),
                 ),
               );
+            }
             final items = snapshot.data ?? [];
-            if (items.isEmpty)
+            if (items.isEmpty) {
               return const Center(child: Text('Chưa đăng ký ca trực'));
+            }
             return RefreshIndicator(
               onRefresh: () async => setState(_reload),
               child: ListView(

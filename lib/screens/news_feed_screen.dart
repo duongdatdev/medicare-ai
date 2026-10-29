@@ -25,18 +25,21 @@ class _NewsFeedScreenState extends State<NewsFeedScreen> {
   Widget build(BuildContext context) => FutureBuilder<List<dynamic>>(
     future: _news,
     builder: (context, snapshot) {
-      if (snapshot.connectionState == ConnectionState.waiting)
+      if (snapshot.connectionState == ConnectionState.waiting) {
         return const Center(child: CircularProgressIndicator());
-      if (snapshot.hasError)
+      }
+      if (snapshot.hasError) {
         return Center(
           child: TextButton(
             onPressed: () => setState(_load),
             child: const Text('Không tải được tin. Thử lại'),
           ),
         );
+      }
       final items = snapshot.data ?? [];
-      if (items.isEmpty)
+      if (items.isEmpty) {
         return const Center(child: Text('Chưa có tin tức mới'));
+      }
       return RefreshIndicator(
         onRefresh: () async => setState(_load),
         child: ListView(
@@ -58,8 +61,9 @@ class _NewsFeedScreenState extends State<NewsFeedScreen> {
                   trailing: const Icon(Icons.open_in_new),
                   onTap: () async {
                     final url = Uri.tryParse('${item['url'] ?? ''}');
-                    if (url != null && await canLaunchUrl(url))
+                    if (url != null && await canLaunchUrl(url)) {
                       await launchUrl(url);
+                    }
                   },
                 ),
               ),

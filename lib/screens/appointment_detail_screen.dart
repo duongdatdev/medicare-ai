@@ -51,9 +51,10 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
         _date,
       );
     } catch (error) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text('$error')));
+      }
     }
     if (mounted) setState(() => _loadingSlots = false);
   }
@@ -68,9 +69,10 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
       );
       if (mounted) Navigator.pop(context, true);
     } catch (error) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text('$error')));
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -82,12 +84,14 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
     body: FutureBuilder<Map<String, dynamic>>(
       future: _detail,
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting)
+        if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
-        if (snapshot.hasError)
+        }
+        if (snapshot.hasError) {
           return Center(
             child: Text('Không tải được chi tiết: ${snapshot.error}'),
           );
+        }
         final detail = snapshot.data!;
         final mayReschedule =
             widget.appointment.status == 0 &&

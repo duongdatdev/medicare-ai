@@ -23,10 +23,11 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen> {
     Api.instance.client
         .get<Map<String, dynamic>>('/admin/notifications/unread-count')
         .then((response) {
-          if (mounted)
+          if (mounted) {
             setState(
               () => _unread = (response.data?['count'] as num?)?.toInt() ?? 0,
             );
+          }
         });
   }
 
@@ -35,9 +36,10 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen> {
       await Api.instance.client.post('/admin/notifications/read-all');
       if (mounted) setState(() => _load());
     } catch (error) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text('$error')));
+      }
     }
   }
 
@@ -55,18 +57,21 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen> {
         child: FutureBuilder<List<dynamic>>(
           future: _items,
           builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting)
+            if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
-            if (snapshot.hasError)
+            }
+            if (snapshot.hasError) {
               return Center(
                 child: TextButton(
                   onPressed: () => setState(_load),
                   child: const Text('Tải lại thông báo'),
                 ),
               );
+            }
             final rows = snapshot.data ?? [];
-            if (rows.isEmpty)
+            if (rows.isEmpty) {
               return const Center(child: Text('Hộp thư đang trống'));
+            }
             return RefreshIndicator(
               onRefresh: () async => setState(_load),
               child: ListView(

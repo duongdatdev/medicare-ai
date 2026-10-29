@@ -56,9 +56,10 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
           ? null
           : insurance['cardNumber'] as String?;
     } catch (error) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text('$error')));
+      }
     }
     if (mounted) setState(() => _loading = false);
   }
@@ -68,20 +69,23 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
     setState(() => _saving = true);
     final data = <String, dynamic>{};
     for (final entry in _fields.entries) {
-      if (entry.value.text.trim().isNotEmpty)
+      if (entry.value.text.trim().isNotEmpty) {
         data[entry.key] = entry.key == 'age'
             ? int.tryParse(entry.value.text)
             : entry.value.text.trim();
+      }
     }
     try {
       await Api.instance.client.put('/patient/me', data: data);
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(const SnackBar(content: Text('Đã lưu hồ sơ')));
+      }
     } catch (error) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text('$error')));
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }
