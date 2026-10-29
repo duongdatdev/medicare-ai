@@ -10,6 +10,9 @@ import { Disease } from '../disease/disease.entity.js';
 import { AppointmentItem } from '../patient/appointment-item.entity.js';
 import { calcBill } from '../billing/billing.util.js';
 import { CompleteAppointmentDto } from './doctor.dto.js';
+import { CreateDoctorDto, UpdateDoctorDto } from './doctor.dto.js';
+import { Account } from '../auth/account.entity.js';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class DoctorService {
@@ -19,6 +22,7 @@ export class DoctorService {
     @InjectRepository(ShiftAssignment) private readonly assignments: Repository<ShiftAssignment>,
     @InjectRepository(Shift) private readonly shifts: Repository<Shift>,
     @InjectRepository(Disease) private readonly diseases: Repository<Disease>,
+    @InjectRepository(Account) private readonly accounts: Repository<Account>,
   ) {}
 
   list() {
@@ -45,6 +49,41 @@ export class DoctorService {
     return this.assignments.save(this.assignments.create({
       type: shift.type, startTime, endTime, status: 'ACTIVE', duration: 0, doctorId, shiftId,
     }));
+  }
+
+  async createDoctor(input: CreateDoctorDto) {
+    return this.doctors.manager.transaction(async (manager) => {
+      if (await manager.exists(Account, { where: { email: input.email } })) throw new ConflictException('Email đã tồn tại');
+      const doctor = await manager.save(Doctor, { ...input, dateOfBirth: new Date(input.dateOfBirth), avatar: '' });
+      const account = await manager.save(Account, {
+        email: input.email, passwordHash: await bcrypt.hash(input.password, 10), role: 'doctor',
+        doctorId: doctor.id, patientId: null,
+      });
+      return { id: account.id, doctorId: doctor.id, email: input.email, role: 'doctor' };
+    });
+  }
+
+  async getDoctor(id: number) {
+    const doctor = await this.doctors.findOneBy({ id });
+    if (!doctor) throw new NotFoundException();
+    return doctor;
+  }
+
+  async updateDoctor(id: number, changes: UpdateDoctorDto) {
+    const doctor = await this.getDoctor(id);
+    return this.doctors.save(Object.assign(doctor, changes));
+  }
+
+  async salaries(hourlyRate = 300000) {
+    const assignments = await this.assignments.find();
+    const doctors = await this.doctors.find({ order: { name: 'ASC' } });
+    return doctors.map((doctor) => {
+      const hours = assignments.filter((assignment) => assignment.doctorId === doctor.id)
+        .reduce((sum, assignment) => sum + (assignment.status === 'ACTIVE'
+          ? (assignment.endTime.getTime() - assignment.startTime.getTime()) / 3600000
+          : assignment.duration), 0);
+      return { doctorId: doctor.id, doctorName: doctor.name, totalHours: hours, hourlyRate, salary: Math.round(hours * hourlyRate) };
+    });
   }
 
   async listAppointments(doctorId: number, status: number) {

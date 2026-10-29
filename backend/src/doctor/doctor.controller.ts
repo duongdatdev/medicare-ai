@@ -1,8 +1,9 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseIntPipe, Post, Query, Put } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { CurrentUser, Roles } from '../auth/auth.decorators.js';
 import { DoctorService } from './doctor.service.js';
 import { CompleteAppointmentDto } from './doctor.dto.js';
+import { CreateDoctorDto, UpdateDoctorDto } from './doctor.dto.js';
 
 @ApiTags('doctor')
 @ApiBearerAuth()
@@ -13,6 +14,18 @@ export class DoctorController {
   @Get('list') list() {
     return this.doctors.list();
   }
+
+  @Roles('admin')
+  @Post('register-admin')
+  createDoctor(@Body() input: CreateDoctorDto) { return this.doctors.createDoctor(input); }
+
+  @Roles('admin')
+  @Get('detail/:id')
+  doctorDetail(@Param('id', ParseIntPipe) id: number) { return this.doctors.getDoctor(id); }
+
+  @Roles('admin')
+  @Put('update/:id')
+  updateDoctor(@Param('id', ParseIntPipe) id: number, @Body() input: UpdateDoctorDto) { return this.doctors.updateDoctor(id, input); }
 
   @Get('availability') availability(
     @Query('doctorId', ParseIntPipe) doctorId: number,

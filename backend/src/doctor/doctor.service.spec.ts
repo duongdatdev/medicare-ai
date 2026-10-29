@@ -26,4 +26,17 @@ describe('DoctorService availability', () => {
     await expect(service.completeAppointment(4, 9, { diseaseIds: [2, 2] })).rejects.toBeInstanceOf(ConflictException);
     expect(manager.transaction).not.toHaveBeenCalled();
   });
+
+  it('calculates salary from full active shifts and recorded partial hours', async () => {
+    const doctors = { find: vi.fn().mockResolvedValue([{ id: 4, name: 'Doctor' }]) };
+    const assignments = { find: vi.fn().mockResolvedValue([
+      { doctorId: 4, status: 'ACTIVE', startTime: new Date('2026-11-12T00:00:00Z'), endTime: new Date('2026-11-12T04:00:00Z'), duration: 0 },
+      { doctorId: 4, status: 'CANCELED', duration: 1.5 },
+    ]) };
+    const service = new DoctorService(doctors as never, {} as never, assignments as never, {} as never, {} as never, {} as never);
+
+    await expect(service.salaries(300000)).resolves.toEqual([
+      { doctorId: 4, doctorName: 'Doctor', totalHours: 5.5, hourlyRate: 300000, salary: 1650000 },
+    ]);
+  });
 });

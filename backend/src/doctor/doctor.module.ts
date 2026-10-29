@@ -8,10 +8,12 @@ import { ShiftAssignment } from './shift-assignment.entity.js';
 import { Shift } from './shift.entity.js';
 import { Disease } from '../disease/disease.entity.js';
 import { AppointmentItem } from '../patient/appointment-item.entity.js';
+import { Account } from '../auth/account.entity.js';
+import { AdminController } from './admin.controller.js';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Doctor, Appointment, AppointmentItem, Disease, ShiftAssignment, Shift])],
-  controllers: [DoctorController],
+  imports: [TypeOrmModule.forFeature([Doctor, Appointment, AppointmentItem, Disease, ShiftAssignment, Shift, Account])],
+  controllers: [DoctorController, AdminController],
   providers: [DoctorService],
 })
 export class DoctorModule {}
