@@ -13,6 +13,7 @@ import { CompleteAppointmentDto } from './doctor.dto.js';
 import { CreateDoctorDto, UpdateDoctorDto } from './doctor.dto.js';
 import { Account } from '../auth/account.entity.js';
 import * as bcrypt from 'bcrypt';
+import { Patient } from '../patient/patient.entity.js';
 
 @Injectable()
 export class DoctorService {
@@ -23,6 +24,7 @@ export class DoctorService {
     @InjectRepository(Shift) private readonly shifts: Repository<Shift>,
     @InjectRepository(Disease) private readonly diseases: Repository<Disease>,
     @InjectRepository(Account) private readonly accounts: Repository<Account>,
+    @InjectRepository(Patient) private readonly patients: Repository<Patient>,
   ) {}
 
   list() {
@@ -49,6 +51,31 @@ export class DoctorService {
     return this.assignments.save(this.assignments.create({
       type: shift.type, startTime, endTime, status: 'ACTIVE', duration: 0, doctorId, shiftId,
     }));
+  }
+
+  myShifts(doctorId: number) {
+    return this.assignments.find({ where: { doctorId }, order: { startTime: 'ASC' } });
+  }
+
+  shiftOverview() {
+    return this.assignments.find({ order: { startTime: 'ASC' } });
+  }
+
+  async cancelAssignment(doctorId: number, id: number) {
+    const assignment = await this.assignments.findOneBy({ id });
+    if (!assignment) throw new NotFoundException();
+    if (assignment.doctorId !== doctorId) throw new ForbiddenException();
+    if (assignment.status !== 'ACTIVE') throw new ConflictException('Ca trực đã hủy');
+    assignment.duration = Math.max(0, Math.min(assignment.endTime.getTime(), Date.now()) - assignment.startTime.getTime()) / 3600000;
+    assignment.status = 'CANCELED';
+    return this.assignments.save(assignment);
+  }
+
+  async deleteAssignment(doctorId: number, id: number) {
+    const assignment = await this.assignments.findOneBy({ id });
+    if (!assignment) throw new NotFoundException();
+    if (assignment.doctorId !== doctorId) throw new ForbiddenException();
+    await this.assignments.remove(assignment);
   }
 
   async createDoctor(input: CreateDoctorDto) {
@@ -99,6 +126,41 @@ export class DoctorService {
     appointment.confirmDate = new Date();
     appointment.doctorNote = note ?? null;
     return this.appointments.save(appointment);
+  }
+
+  async cancelAppointment(doctorId: number, appointmentId: number, reason: string) {
+    const appointment = await this.appointments.findOneBy({ id: appointmentId });
+    if (!appointment) throw new NotFoundException();
+    if (appointment.doctorId !== doctorId) throw new ForbiddenException();
+    if (appointment.confirmCondition === 2 || appointment.cancelReason) throw new ConflictException('Lịch đã kết thúc');
+    appointment.cancelReason = reason;
+    appointment.canceledBy = 'doctor';
+    return this.appointments.save(appointment);
+  }
+
+  async rescheduleAppointment(doctorId: number, appointmentId: number, apTime: string) {
+    const appointment = await this.appointments.findOneBy({ id: appointmentId });
+    if (!appointment) throw new NotFoundException();
+    if (appointment.doctorId !== doctorId) throw new ForbiddenException();
+    if (appointment.confirmCondition !== 0 || appointment.rescheduled || appointment.cancelReason) throw new ConflictException('Lịch không thể đổi giờ');
+    const target = new Date(apTime);
+    if (!(await this.availability(doctorId, target.toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }))).includes(target.toISOString())) {
+      throw new ConflictException('Khung giờ không còn trống');
+    }
+    appointment.apTime = target;
+    appointment.rescheduled = true;
+    return this.appointments.save(appointment);
+  }
+
+  async reExamination(doctorId: number, patientId: number, apTime: string, address: string, note?: string) {
+    const patient = await this.patients.findOneBy({ id: patientId });
+    const doctor = await this.doctors.findOneBy({ id: doctorId });
+    if (!patient || !doctor) throw new NotFoundException();
+    return this.appointments.save(this.appointments.create({
+      apTime: new Date(apTime), confirmDate: new Date(), address, note: note ?? null,
+      doctorNote: null, confirmCondition: 0, cancelReason: null, canceledBy: null,
+      rescheduled: false, doctorName: doctor.name, patientId, doctorId,
+    }));
   }
 
   async completeAppointment(doctorId: number, appointmentId: number, input: CompleteAppointmentDto) {

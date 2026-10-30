@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Post, Query, Put } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Query, Put } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { CurrentUser, Roles } from '../auth/auth.decorators.js';
 import { DoctorService } from './doctor.service.js';
@@ -40,6 +40,22 @@ export class DoctorController {
   }
 
   @Roles('doctor')
+  @Get('my-shifts') myShifts(@CurrentUser() user: { doctorId: number }) { return this.doctors.myShifts(user.doctorId); }
+
+  @Roles('doctor', 'admin')
+  @Get('shift-overview') shiftOverview() { return this.doctors.shiftOverview(); }
+
+  @Roles('doctor')
+  @Post('cancel-assignment/:id') cancelAssignment(@CurrentUser() user: { doctorId: number }, @Param('id', ParseIntPipe) id: number) {
+    return this.doctors.cancelAssignment(user.doctorId, id);
+  }
+
+  @Roles('doctor')
+  @Delete('assignment/:id') deleteAssignment(@CurrentUser() user: { doctorId: number }, @Param('id', ParseIntPipe) id: number) {
+    return this.doctors.deleteAssignment(user.doctorId, id);
+  }
+
+  @Roles('doctor')
   @Post('register-shift')
   registerShift(@CurrentUser() user: { doctorId: number }, @Body() input: { shiftId: number; date: string }) {
     return this.doctors.registerShift(user.doctorId, input.shiftId, input.date);
@@ -67,6 +83,24 @@ export class DoctorController {
   @Post('confirm-appointment/:id')
   confirm(@CurrentUser() user: { doctorId: number }, @Param('id', ParseIntPipe) id: number, @Body() body: { note?: string }) {
     return this.doctors.confirmAppointment(user.doctorId, id, body.note);
+  }
+
+  @Roles('doctor')
+  @Post('cancel-appointment/:id')
+  cancelAppointment(@CurrentUser() user: { doctorId: number }, @Param('id', ParseIntPipe) id: number, @Body() body: { reason: string }) {
+    return this.doctors.cancelAppointment(user.doctorId, id, body.reason);
+  }
+
+  @Roles('doctor')
+  @Put('reschedule-appointment/:id')
+  rescheduleAppointment(@CurrentUser() user: { doctorId: number }, @Param('id', ParseIntPipe) id: number, @Body() body: { apTime: string }) {
+    return this.doctors.rescheduleAppointment(user.doctorId, id, body.apTime);
+  }
+
+  @Roles('doctor')
+  @Post('re-examination')
+  reExamination(@CurrentUser() user: { doctorId: number }, @Body() body: { patientId: number; apTime: string; address: string; note?: string }) {
+    return this.doctors.reExamination(user.doctorId, body.patientId, body.apTime, body.address, body.note);
   }
 
   @Roles('doctor')

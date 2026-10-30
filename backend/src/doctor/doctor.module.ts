@@ -9,10 +9,11 @@ import { Shift } from './shift.entity.js';
 import { Disease } from '../disease/disease.entity.js';
 import { AppointmentItem } from '../patient/appointment-item.entity.js';
 import { Account } from '../auth/account.entity.js';
+import { Patient } from '../patient/patient.entity.js';
 import { AdminController } from './admin.controller.js';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Doctor, Appointment, AppointmentItem, Disease, ShiftAssignment, Shift, Account])],
+  imports: [TypeOrmModule.forFeature([Doctor, Patient, Appointment, AppointmentItem, Disease, ShiftAssignment, Shift, Account])],
   controllers: [DoctorController, AdminController],
   providers: [DoctorService],
 })
