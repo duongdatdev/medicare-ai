@@ -1,7 +1,7 @@
 import { Body, Controller, Post } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { Public } from './auth.decorators.js';
-import { LoginDto, RegisterPatientDto } from './auth.dto.js';
+import { Public, Roles } from './auth.decorators.js';
+import { LoginDto, RegisterDoctorDto, RegisterPatientDto } from './auth.dto.js';
 import { AuthService } from './auth.service.js';
 import { BhytService } from '../billing/bhyt.service.js';
 import { BhytLookupDto } from '../billing/bhyt.dto.js';
@@ -27,5 +27,11 @@ export class AuthController {
   @Post('login')
   login(@Body() input: LoginDto) {
     return this.auth.login(input.email, input.password);
+  }
+
+  @Roles('admin')
+  @Post('register-doctor')
+  registerDoctor(@Body() input: RegisterDoctorDto) {
+    return this.auth.registerDoctor(input);
   }
 }

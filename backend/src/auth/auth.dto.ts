@@ -16,3 +16,14 @@ export class LoginDto {
   @IsEmail() email: string;
   @IsString() password: string;
 }
+
+export class RegisterDoctorDto {
+  @IsEmail() email: string;
+  @MinLength(8) password: string;
+  @IsString() name: string;
+  @IsInt() age: number;
+  @IsDateString() dateOfBirth: string;
+  @IsIn(['male', 'female', 'other']) gender: string;
+  @IsString() phone: string;
+  @IsString() address: string;
+}

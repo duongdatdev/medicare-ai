@@ -8,10 +8,11 @@ import { AuthService } from './auth.service.js';
 import { Patient } from '../patient/patient.entity.js';
 import { BhytRegistry } from '../billing/bhyt-registry.entity.js';
 import { BhytService } from '../billing/bhyt.service.js';
+import { Doctor } from '../doctor/doctor.entity.js';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Account, Patient, BhytRegistry]),
+    TypeOrmModule.forFeature([Account, Patient, Doctor, BhytRegistry]),
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({

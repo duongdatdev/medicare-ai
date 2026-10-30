@@ -4,14 +4,16 @@ import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
 import { Repository } from 'typeorm';
 import { Account } from './account.entity.js';
-import { RegisterPatientDto } from './auth.dto.js';
+import { RegisterDoctorDto, RegisterPatientDto } from './auth.dto.js';
 import { Patient } from '../patient/patient.entity.js';
+import { Doctor } from '../doctor/doctor.entity.js';
 
 @Injectable()
 export class AuthService {
   constructor(
     @InjectRepository(Account) private readonly accounts: Repository<Account>,
     @InjectRepository(Patient) private readonly patients: Repository<Patient>,
+    @InjectRepository(Doctor) private readonly doctors: Repository<Doctor>,
     private readonly jwt: JwtService,
   ) {}
 
@@ -45,6 +47,18 @@ export class AuthService {
       ? await this.patients.findOneBy({ id: account.patientId })
       : null;
     return this.createSession(account, patient?.name ?? 'Admin', patient?.avatar ?? null);
+  }
+
+  async registerDoctor(input: RegisterDoctorDto) {
+    return this.accounts.manager.transaction(async (manager) => {
+      if (await manager.exists(Account, { where: { email: input.email } })) throw new ConflictException('Email đã tồn tại');
+      const doctor = await manager.save(Doctor, { ...input, dateOfBirth: new Date(input.dateOfBirth), avatar: '' });
+      const account = await manager.save(Account, {
+        email: input.email, passwordHash: await bcrypt.hash(input.password, 10), role: 'doctor',
+        doctorId: doctor.id, patientId: null,
+      });
+      return { id: account.id, doctorId: doctor.id, email: input.email, role: 'doctor' };
+    });
   }
 
   private createSession(account: Account, name: string, avatarUrl: string | null) {
