@@ -9,6 +9,7 @@ import { Patient } from '../patient/patient.entity.js';
 import { BhytRegistry } from '../billing/bhyt-registry.entity.js';
 import { BhytService } from '../billing/bhyt.service.js';
 import { Doctor } from '../doctor/doctor.entity.js';
+import { AdminBootstrapService } from './admin-bootstrap.service.js';
 
 @Module({
   imports: [
@@ -22,7 +23,7 @@ import { Doctor } from '../doctor/doctor.entity.js';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, BhytService],
+  providers: [AuthService, BhytService, AdminBootstrapService],
   exports: [JwtModule],
 })
 export class AuthModule {}
