@@ -85,10 +85,10 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen> {
                               ? Icons.notifications_active
                               : Icons.notifications_none,
                         ),
-                        title: Text(
-                          '${row['title'] ?? row['message'] ?? 'Thông báo'}',
+                        title: Text('${row['title'] ?? 'Thông báo'}'),
+                        subtitle: Text(
+                          '${row['body'] ?? ''}\n${row['createdAt'] ?? ''}',
                         ),
-                        subtitle: Text('${row['createdAt'] ?? ''}'),
                       ),
                     ),
                 ],

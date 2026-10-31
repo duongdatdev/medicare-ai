@@ -80,7 +80,7 @@ class _AdminPaymentsScreenState extends State<AdminPaymentsScreen> {
                     Card(
                       child: ListTile(
                         title: Text(
-                          '${row['patientName'] ?? row['appointmentId'] ?? 'Hóa đơn'}',
+                          '${(row['patient'] as Map<String, dynamic>?)?['name'] ?? 'Bệnh nhân'} · lịch #${row['id']}',
                         ),
                         subtitle: Text(
                           '${row['paymentMethod'] ?? row['method'] ?? ''} · ${row['paymentStatus'] ?? row['status'] ?? ''}',

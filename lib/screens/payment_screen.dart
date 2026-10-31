@@ -12,6 +12,8 @@ class PaymentScreen extends StatefulWidget {
 
 class _PaymentScreenState extends State<PaymentScreen> {
   Map<String, dynamic> _data = {};
+  Map<String, dynamic>? _qr;
+  String? _paymentStatus;
   bool _loading = true;
   bool _saving = false;
   String? _error;
@@ -27,6 +29,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
         '/patient/appointment/${widget.appointmentId}',
       );
       _data = response.data ?? {};
+      _paymentStatus = _data['paymentStatus'] as String? ?? _paymentStatus;
       _error = null;
     } catch (error) {
       _error = '$error';
@@ -47,7 +50,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
       final qr = response.data?['qr'] as Map<String, dynamic>?;
       if (mounted) {
         setState(() {
-          if (qr != null) _data = {..._data, 'qr': qr};
+          _qr = qr;
+          _paymentStatus = response.data?['paymentStatus'] as String?;
         });
       }
       await _reload();
@@ -80,12 +84,12 @@ class _PaymentScreenState extends State<PaymentScreen> {
                       _line('Tổng hóa đơn', _data['total']),
                       _line('BHYT chi trả', _data['insuranceCovered']),
                       _line('Cần thanh toán', _data['payable']),
-                      _line('Trạng thái', _data['paymentStatus'] ?? 'unpaid'),
+                      _line('Trạng thái', _paymentStatus ?? 'unpaid'),
                     ],
                   ),
                 ),
               ),
-              if ((_data['paymentStatus'] ?? 'unpaid') != 'paid') ...[
+              if ((_paymentStatus ?? 'unpaid') != 'paid') ...[
                 const SizedBox(height: 12),
                 FilledButton.icon(
                   onPressed: _saving ? null : () => _pay('cash'),
@@ -99,18 +103,13 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   label: const Text('Chuyển khoản VietQR'),
                 ),
               ],
-              if (_data['qr'] is Map<String, dynamic>) ...[
+              if (_qr != null) ...[
                 const SizedBox(height: 16),
                 Center(
-                  child: QrImageView(
-                    data: '${(_data['qr'] as Map<String, dynamic>)['payload']}',
-                    size: 240,
-                  ),
+                  child: QrImageView(data: '${_qr!['payload']}', size: 240),
                 ),
                 Center(
-                  child: Text(
-                    'Nội dung chuyển khoản: ${(_data['qr'] as Map<String, dynamic>)['content']}',
-                  ),
+                  child: Text('Nội dung chuyển khoản: ${_qr!['content']}'),
                 ),
               ],
               if (_error != null)

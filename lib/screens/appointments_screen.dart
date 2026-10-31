@@ -211,7 +211,9 @@ class _AppointmentCard extends StatelessWidget {
             ),
             if (appointment.address.isNotEmpty) Text(appointment.address),
             if (appointment.note != null) Text(appointment.note!),
-            if (appointment.status == 1 && appointment.note == null)
+            if ((!doctor && appointment.status < 2 ||
+                    doctor && appointment.status <= 1) &&
+                appointment.cancelReason == null)
               Wrap(
                 spacing: 8,
                 children: [

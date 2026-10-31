@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/appointment.dart';
 import '../services/appointments.dart';
+import 're_examination_screen.dart';
 
 class AppointmentDetailScreen extends StatefulWidget {
   const AppointmentDetailScreen({
@@ -94,7 +95,9 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
         }
         final detail = snapshot.data!;
         final mayReschedule =
-            widget.appointment.status == 0 &&
+            (widget.doctor
+                ? widget.appointment.status == 0
+                : widget.appointment.status != 2) &&
             !widget.appointment.rescheduled &&
             widget.appointment.cancelReason == null;
         return ListView(
@@ -148,6 +151,26 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
                   'Lịch này chưa có mã bác sĩ để tra khung giờ trống.',
                 ),
             ],
+            if (widget.doctor &&
+                widget.appointment.status == 2 &&
+                widget.appointment.patientId != null)
+              FilledButton.tonalIcon(
+                onPressed: () =>
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ReExaminationScreen(
+                          patientId: widget.appointment.patientId!,
+                        ),
+                      ),
+                    ).then((created) {
+                      if (created == true && context.mounted) {
+                        Navigator.pop(context, true);
+                      }
+                    }),
+                icon: const Icon(Icons.event_repeat),
+                label: const Text('Đặt lịch tái khám'),
+              ),
           ],
         );
       },

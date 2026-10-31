@@ -7,6 +7,7 @@ class Appointment {
     this.name,
     this.note,
     this.doctorId,
+    this.patientId,
     this.rescheduled = false,
     this.cancelReason,
   });
@@ -18,6 +19,7 @@ class Appointment {
   final String? name;
   final String? note;
   final int? doctorId;
+  final int? patientId;
   final bool rescheduled;
   final String? cancelReason;
 
@@ -31,6 +33,9 @@ class Appointment {
     doctorId:
         (json['doctorId'] as num?)?.toInt() ??
         ((json['doctor'] as Map<String, dynamic>?)?['id'] as num?)?.toInt(),
+    patientId:
+        (json['patientId'] as num?)?.toInt() ??
+        ((json['patient'] as Map<String, dynamic>?)?['id'] as num?)?.toInt(),
     rescheduled: json['rescheduled'] as bool? ?? false,
     cancelReason: json['cancelReason'] as String?,
   );
