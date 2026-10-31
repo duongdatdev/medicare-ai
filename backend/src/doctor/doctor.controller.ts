@@ -1,9 +1,10 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Query, Put } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Query, Put, Res } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { CurrentUser, Roles } from '../auth/auth.decorators.js';
 import { DoctorService } from './doctor.service.js';
 import { CompleteAppointmentDto } from './doctor.dto.js';
 import { CreateDoctorDto, UpdateDoctorDto } from './doctor.dto.js';
+import type { Response } from 'express';
 
 @ApiTags('doctor')
 @ApiBearerAuth()
@@ -77,6 +78,15 @@ export class DoctorController {
   @Get('list-completed')
   completed(@CurrentUser() user: { doctorId: number }) {
     return this.doctors.listAppointments(user.doctorId, 2);
+  }
+
+  @Roles('doctor')
+  @Get('report/:appointmentId')
+  async report(@Param('appointmentId', ParseIntPipe) id: number, @Res() response: Response) {
+    const pdf = await this.doctors.getReport(id);
+    if (!pdf) return response.status(404).end();
+    response.set({ 'Content-Type': 'application/pdf', 'Content-Disposition': `attachment; filename="report-${id}.pdf"` });
+    response.end(pdf);
   }
 
   @Roles('doctor')

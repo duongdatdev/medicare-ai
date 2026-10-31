@@ -14,6 +14,7 @@ import { CreateDoctorDto, UpdateDoctorDto } from './doctor.dto.js';
 import { Account } from '../auth/account.entity.js';
 import * as bcrypt from 'bcrypt';
 import { Patient } from '../patient/patient.entity.js';
+import { MedicalReport } from '../patient/medical-report.entity.js';
 
 @Injectable()
 export class DoctorService {
@@ -25,6 +26,7 @@ export class DoctorService {
     @InjectRepository(Disease) private readonly diseases: Repository<Disease>,
     @InjectRepository(Account) private readonly accounts: Repository<Account>,
     @InjectRepository(Patient) private readonly patients: Repository<Patient>,
+    @InjectRepository(MedicalReport) private readonly reports: Repository<MedicalReport>,
   ) {}
 
   list() {
@@ -150,6 +152,11 @@ export class DoctorService {
     appointment.apTime = target;
     appointment.rescheduled = true;
     return this.appointments.save(appointment);
+  }
+
+  async getReport(appointmentId: number) {
+    const report = await this.reports.findOne({ where: { appointment: { id: appointmentId } }, order: { createdAt: 'DESC' } });
+    return report?.pdf ?? null;
   }
 
   async reExamination(doctorId: number, patientId: number, apTime: string, address: string, note?: string) {
