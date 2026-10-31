@@ -2,8 +2,7 @@ import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Query, Put, R
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { CurrentUser, Roles } from '../auth/auth.decorators.js';
 import { DoctorService } from './doctor.service.js';
-import { CompleteAppointmentDto } from './doctor.dto.js';
-import { CreateDoctorDto, UpdateDoctorDto } from './doctor.dto.js';
+import { CancelShiftDto, CompleteAppointmentDto, CreateDoctorDto, UpdateDoctorDto } from './doctor.dto.js';
 import type { Response } from 'express';
 
 @ApiTags('doctor')
@@ -54,6 +53,16 @@ export class DoctorController {
   @Roles('doctor')
   @Delete('assignment/:id') deleteAssignment(@CurrentUser() user: { doctorId: number }, @Param('id', ParseIntPipe) id: number) {
     return this.doctors.deleteAssignment(user.doctorId, id);
+  }
+
+  @Roles('doctor')
+  @Post('cancel-shift') cancelShift(@CurrentUser() user: { doctorId: number }, @Body() input: CancelShiftDto) {
+    return this.doctors.cancelShift(user.doctorId, input.shiftId);
+  }
+
+  @Roles('doctor')
+  @Delete('delete-shift/:shiftId') deleteShift(@CurrentUser() user: { doctorId: number }, @Param('shiftId', ParseIntPipe) shiftId: number) {
+    return this.doctors.deleteShift(user.doctorId, shiftId);
   }
 
   @Roles('doctor')

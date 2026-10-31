@@ -22,3 +22,7 @@ export class UpdateDoctorDto {
   @IsOptional() @IsString() phone?: string;
   @IsOptional() @IsString() address?: string;
 }
+
+export class CancelShiftDto {
+  @IsInt() shiftId: number;
+}

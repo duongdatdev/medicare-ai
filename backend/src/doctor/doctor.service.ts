@@ -80,6 +80,20 @@ export class DoctorService {
     await this.assignments.remove(assignment);
   }
 
+  async cancelShift(doctorId: number, shiftId: number) {
+    const assignment = await this.assignments.findOneBy({ doctorId, shiftId, status: 'ACTIVE' });
+    if (!assignment) throw new NotFoundException('Không tìm thấy ca trực');
+    const stoppedAt = Math.min(Math.max(Date.now(), assignment.startTime.getTime()), assignment.endTime.getTime());
+    assignment.duration = Math.round(Math.max(0, stoppedAt - assignment.startTime.getTime()) / 3600000 * 100) / 100;
+    assignment.endTime = new Date(stoppedAt);
+    assignment.status = 'CANCELED';
+    return this.assignments.save(assignment);
+  }
+
+  async deleteShift(doctorId: number, shiftId: number) {
+    await this.assignments.delete({ doctorId, shiftId });
+  }
+
   async createDoctor(input: CreateDoctorDto) {
     return this.doctors.manager.transaction(async (manager) => {
       if (await manager.exists(Account, { where: { email: input.email } })) throw new ConflictException('Email đã tồn tại');

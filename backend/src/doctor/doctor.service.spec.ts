@@ -39,4 +39,18 @@ describe('DoctorService availability', () => {
       { doctorId: 4, doctorName: 'Doctor', totalHours: 5.5, hourlyRate: 300000, salary: 1650000 },
     ]);
   });
+
+  it('stops a canceled shift at the cancellation time and records worked hours', async () => {
+    const startTime = new Date(Date.now() - 90 * 60_000);
+    const endTime = new Date(Date.now() + 60 * 60_000);
+    const assignment = { startTime, endTime, status: 'ACTIVE', duration: 0 };
+    const assignments = { findOneBy: vi.fn().mockResolvedValue(assignment), save: vi.fn().mockResolvedValue(assignment) };
+    const service = new DoctorService({} as never, {} as never, assignments as never, {} as never, {} as never, {} as never, {} as never);
+
+    await service.cancelShift(4, 2);
+
+    expect(assignment.status).toBe('CANCELED');
+    expect(assignment.duration).toBeCloseTo(1.5, 1);
+    expect(endTime.getTime() - assignment.endTime.getTime()).toBeGreaterThan(0);
+  });
 });
