@@ -11,8 +11,18 @@ export interface BillLine {
   bhytCovered: boolean;
 }
 
+export type CardStatus = 'none' | 'valid' | 'expired' | 'not_yet_valid';
+
 function dateInVietnam(date: Date): string {
   return date.toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' });
+}
+
+export function cardStatus(card: InsuranceCard | null, appointmentDate: Date): CardStatus {
+  if (!card) return 'none';
+  const day = dateInVietnam(appointmentDate);
+  if (day < card.validFrom) return 'not_yet_valid';
+  if (day > card.validTo) return 'expired';
+  return 'valid';
 }
 
 export function rateFromCard(number: string): number {
@@ -30,9 +40,8 @@ export function maskCardNumber(number: string): string {
 export function calcBill(examFee: number, examFeeCovered: boolean, lines: BillLine[], card: InsuranceCard | null, appointmentDate: Date) {
   const total = examFee + lines.reduce((sum, line) => sum + line.price, 0);
   const coveredBase = (examFeeCovered ? examFee : 0) + lines.filter((line) => line.bhytCovered).reduce((sum, line) => sum + line.price, 0);
-  const visitDay = dateInVietnam(appointmentDate);
-  const eligible = card !== null && visitDay >= card.validFrom && visitDay <= card.validTo;
-  const insuranceRate = eligible ? rateFromCard(card.number) : 0;
+  const eligible = cardStatus(card, appointmentDate) === 'valid';
+  const insuranceRate = eligible && card ? rateFromCard(card.number) : 0;
   const insuranceCovered = Math.round(coveredBase * insuranceRate);
   return { examFee, examFeeCovered, total, coveredBase, insuranceRate, insuranceCovered, payable: total - insuranceCovered };
 }

@@ -15,6 +15,8 @@ import { Account } from '../auth/account.entity.js';
 import * as bcrypt from 'bcrypt';
 import { Patient } from '../patient/patient.entity.js';
 import { MedicalReport } from '../patient/medical-report.entity.js';
+import { BhytRegistry } from '../billing/bhyt-registry.entity.js';
+import { cardStatus } from '../billing/billing.util.js';
 
 @Injectable()
 export class DoctorService {
@@ -27,6 +29,7 @@ export class DoctorService {
     @InjectRepository(Account) private readonly accounts: Repository<Account>,
     @InjectRepository(Patient) private readonly patients: Repository<Patient>,
     @InjectRepository(MedicalReport) private readonly reports: Repository<MedicalReport>,
+    @InjectRepository(BhytRegistry) private readonly bhytRegistry: Repository<BhytRegistry>,
   ) {}
 
   list() {
@@ -145,13 +148,13 @@ export class DoctorService {
     await this.appointments.delete(appointmentId);
   }
 
-  async confirmAppointment(doctorId: number, appointmentId: number, note?: string) {
+  async confirmAppointment(doctorId: number, appointmentId: number, note?: string, confirmDate?: string) {
     const appointment = await this.appointments.findOneBy({ id: appointmentId });
     if (!appointment) throw new NotFoundException();
     if (appointment.doctorId !== doctorId) throw new ForbiddenException();
     if (appointment.confirmCondition !== 1 || appointment.cancelReason) throw new ConflictException('Lịch không còn chờ xác nhận');
     appointment.confirmCondition = 0;
-    appointment.confirmDate = new Date();
+    appointment.confirmDate = confirmDate ? new Date(confirmDate) : new Date();
     appointment.doctorNote = note ?? null;
     return this.appointments.save(appointment);
   }
@@ -207,8 +210,12 @@ export class DoctorService {
       if (appointment.confirmCondition !== 0 || appointment.cancelReason) throw new ConflictException('Lịch chưa xác nhận hoặc đã hủy');
       const diseases = await manager.findBy(Disease, { id: In(input.diseaseIds), active: true });
       if (!input.diseaseIds.length || diseases.length !== input.diseaseIds.length) throw new BadRequestException('Danh sách chẩn đoán không hợp lệ');
+      const patient = await manager.findOneBy(Patient, { id: appointment.patientId });
+      const card = patient ? await manager.findOneBy(BhytRegistry, { cccd: patient.cccd, birthDate: patient.birthDate }) : null;
+      const eligible = card && cardStatus({ number: card.cardNumber, validFrom: card.validFrom, validTo: card.validTo }, appointment.apTime) === 'valid';
       const fee = Number(process.env.EXAM_FEE ?? 50000);
-      const bill = calcBill(fee, true, diseases.map((disease) => ({ price: disease.price, bhytCovered: disease.bhytCovered })), null, appointment.apTime);
+      const examFeeCovered = process.env.EXAM_FEE_BHYT_COVERED !== 'false';
+      const bill = calcBill(fee, examFeeCovered, diseases.map((disease) => ({ price: disease.price, bhytCovered: disease.bhytCovered })), eligible && card ? { number: card.cardNumber, validFrom: card.validFrom, validTo: card.validTo } : null, appointment.apTime);
       appointment.confirmCondition = 2;
       appointment.examFee = bill.examFee;
       appointment.examFeeCovered = bill.examFeeCovered;
@@ -216,6 +223,8 @@ export class DoctorService {
       appointment.insuranceRate = bill.insuranceRate;
       appointment.insuranceCovered = bill.insuranceCovered;
       appointment.payable = bill.payable;
+      appointment.insuranceCardNumber = eligible && card ? card.cardNumber : null;
+      if (bill.payable === 0) { appointment.paymentStatus = 'paid'; appointment.paidAt = new Date(); }
       await manager.save(appointment);
       await manager.save(AppointmentItem, diseases.map((disease) => ({
         name: disease.name, price: disease.price, bhytCovered: disease.bhytCovered, appointmentId,

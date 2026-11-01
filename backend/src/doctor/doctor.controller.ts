@@ -110,8 +110,8 @@ export class DoctorController {
 
   @Roles('doctor')
   @Post('confirm-appointment/:id')
-  confirm(@CurrentUser() user: { doctorId: number }, @Param('id', ParseIntPipe) id: number, @Body() body: { note?: string }) {
-    return this.doctors.confirmAppointment(user.doctorId, id, body.note);
+  confirm(@CurrentUser() user: { doctorId: number }, @Param('id', ParseIntPipe) id: number, @Body() body: { note?: string; confirmDate?: string }) {
+    return this.doctors.confirmAppointment(user.doctorId, id, body.note, body.confirmDate);
   }
 
   @Roles('doctor')

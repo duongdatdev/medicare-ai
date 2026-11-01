@@ -12,9 +12,10 @@ import { Account } from '../auth/account.entity.js';
 import { Patient } from '../patient/patient.entity.js';
 import { MedicalReport } from '../patient/medical-report.entity.js';
 import { AdminController } from './admin.controller.js';
+import { BhytRegistry } from '../billing/bhyt-registry.entity.js';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Doctor, Patient, Appointment, AppointmentItem, Disease, ShiftAssignment, Shift, Account, MedicalReport])],
+  imports: [TypeOrmModule.forFeature([Doctor, Patient, Appointment, AppointmentItem, Disease, ShiftAssignment, Shift, Account, MedicalReport, BhytRegistry])],
   controllers: [DoctorController, AdminController],
   providers: [DoctorService],
 })
