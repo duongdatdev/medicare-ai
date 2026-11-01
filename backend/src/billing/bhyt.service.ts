@@ -19,4 +19,15 @@ export class BhytService {
       status: card.validTo < new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }) ? 'expired' : 'valid',
     };
   }
+
+  async findCard(cccd: string, birthDate: string) {
+    return this.registry.findOneBy({ cccd, birthDate });
+  }
+
+  static describe(card: BhytRegistry | null) {
+    if (!card) return null;
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' });
+    const status = today < card.validFrom ? 'not_yet_valid' : today > card.validTo ? 'expired' : 'valid';
+    return { cardNumber: card.cardNumber, validFrom: card.validFrom, validTo: card.validTo, rate: rateFromCard(card.cardNumber), status };
+  }
 }
