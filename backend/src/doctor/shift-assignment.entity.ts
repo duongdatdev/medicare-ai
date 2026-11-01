@@ -1,4 +1,6 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { Doctor } from './doctor.entity.js';
+import { Shift } from './shift.entity.js';
 
 @Entity('shiftAssignment')
 export class ShiftAssignment {
@@ -10,4 +12,8 @@ export class ShiftAssignment {
   @Column({ type: 'float', default: 0 }) duration: number;
   @Column() doctorId: number;
   @Column() shiftId: number;
+  @ManyToOne(() => Doctor)
+  @JoinColumn({ name: 'doctorId' }) doctor: Doctor;
+  @ManyToOne(() => Shift)
+  @JoinColumn({ name: 'shiftId' }) shift: Shift;
 }

@@ -24,6 +24,6 @@ import { AdminBootstrapService } from './admin-bootstrap.service.js';
   ],
   controllers: [AuthController],
   providers: [AuthService, BhytService, AdminBootstrapService],
-  exports: [JwtModule],
+  exports: [JwtModule, BhytService],
 })
 export class AuthModule {}

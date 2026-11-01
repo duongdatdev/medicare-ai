@@ -90,6 +90,16 @@ export class DoctorController {
   }
 
   @Roles('doctor')
+  @Get('appointment/:id') detail(@CurrentUser() user: { doctorId: number }, @Param('id', ParseIntPipe) id: number) {
+    return this.doctors.getAppointmentDetail(user.doctorId, id);
+  }
+
+  @Roles('doctor')
+  @Delete('appointment/:id') deleteAppointment(@CurrentUser() user: { doctorId: number }, @Param('id', ParseIntPipe) id: number) {
+    return this.doctors.deleteAppointment(user.doctorId, id);
+  }
+
+  @Roles('doctor')
   @Get('report/:appointmentId')
   async report(@Param('appointmentId', ParseIntPipe) id: number, @Res() response: Response) {
     const pdf = await this.doctors.getReport(id);

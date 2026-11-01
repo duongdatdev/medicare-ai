@@ -64,6 +64,12 @@ export class PaymentService {
         appointment.paymentStatus = 'paid';
         appointment.paidAt = new Date();
         await manager.save(appointment);
+        await manager.save(Notification, manager.create(Notification, {
+          title: 'Đã nhận thanh toán',
+          body: `Lịch #${appointment.id} đã nhận ${input.transferAmount} VND từ SePay.`,
+          appointmentId: appointment.id,
+          readAt: null,
+        }));
         return;
       }
       await manager.save(Notification, manager.create(Notification, {
@@ -76,8 +82,8 @@ export class PaymentService {
     return { success: true };
   }
 
-  pendingPayments() {
-    return this.appointments.find({ where: { paymentStatus: 'pending', cancelReason: IsNull() }, order: { apTime: 'DESC' }, take: 100 });
+  payments(status: 'pending' | 'paid') {
+    return this.appointments.find({ where: { paymentStatus: status, cancelReason: IsNull() }, relations: { patient: true, doctor: true }, order: status === 'paid' ? { paidAt: 'DESC' } : { apTime: 'DESC' }, take: 100 });
   }
 
   async confirm(adminId: number, id: number) {

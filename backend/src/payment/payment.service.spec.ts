@@ -17,6 +17,7 @@ describe('PaymentService SePay webhook', () => {
     const manager = {
       query: vi.fn().mockResolvedValue([{ id: 1 }]),
       findOne: vi.fn().mockResolvedValue(appointment),
+      create: vi.fn((_entity, value) => value),
       save: vi.fn().mockResolvedValue(appointment),
     };
     const transactions = { manager: { transaction: (work: (manager: typeof manager) => unknown) => work(manager) } };
@@ -25,6 +26,6 @@ describe('PaymentService SePay webhook', () => {
     await service.handleWebhook({ id: 802, content: 'DACN12', transferAmount: 50000, transferType: 'in' });
 
     expect(appointment.paymentStatus).toBe('paid');
-    expect(manager.save).toHaveBeenCalledOnce();
+    expect(manager.save).toHaveBeenCalledTimes(2);
   });
 });

@@ -46,7 +46,10 @@ export class AuthService {
     const patient = account.patientId
       ? await this.patients.findOneBy({ id: account.patientId })
       : null;
-    return this.createSession(account, patient?.name ?? 'Admin', patient?.avatar ?? null);
+    const doctor = account.doctorId
+      ? await this.doctors.findOneBy({ id: account.doctorId })
+      : null;
+    return this.createSession(account, patient?.name ?? doctor?.name ?? 'Admin', patient?.avatar ?? doctor?.avatar ?? null);
   }
 
   async registerDoctor(input: RegisterDoctorDto) {

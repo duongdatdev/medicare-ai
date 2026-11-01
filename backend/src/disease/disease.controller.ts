@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { Roles } from '../auth/auth.decorators.js';
+import { CurrentUser, Roles } from '../auth/auth.decorators.js';
 import { CreateDiseaseDto, UpdateDiseaseDto } from './disease.dto.js';
 import { DiseaseService } from './disease.service.js';
 
@@ -10,7 +10,8 @@ import { DiseaseService } from './disease.service.js';
 export class DiseaseController {
   constructor(private readonly diseases: DiseaseService) {}
 
-  @Get() list() { return this.diseases.list(); }
+  @Roles('admin', 'doctor')
+  @Get() list(@CurrentUser() user: { role: string }) { return this.diseases.list(user.role); }
 
   @Roles('admin')
   @Post()

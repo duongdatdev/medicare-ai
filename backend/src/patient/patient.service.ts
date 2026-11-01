@@ -5,18 +5,21 @@ import { Patient } from './patient.entity.js';
 import { Appointment } from './appointment.entity.js';
 import { CreateAppointmentDto } from './appointment.dto.js';
 import { RescheduleAppointmentDto } from './appointment.dto.js';
+import { BhytService } from '../billing/bhyt.service.js';
 
 @Injectable()
 export class PatientService {
   constructor(
     @InjectRepository(Patient) private readonly patients: Repository<Patient>,
     @InjectRepository(Appointment) private readonly appointments: Repository<Appointment>,
+    private readonly bhyt: BhytService,
   ) {}
 
   async getProfile(id: number) {
     const patient = await this.patients.findOneBy({ id });
     if (!patient) throw new NotFoundException();
-    return { ...patient, insurance: null };
+    const card = await this.bhyt.findCard(patient.cccd, patient.birthDate);
+    return { ...patient, insurance: BhytService.describe(card) };
   }
 
   async updateProfile(id: number, changes: Partial<Patient>) {
@@ -50,11 +53,11 @@ export class PatientService {
   }
 
   listAppointments(patientId: number) {
-    return this.appointments.find({ where: { patientId }, order: { apTime: 'ASC' } });
+    return this.appointments.find({ where: { patientId }, relations: { doctor: true }, order: { apTime: 'DESC' } });
   }
 
   async getAppointment(patientId: number, id: number) {
-    const appointment = await this.appointments.findOneBy({ id });
+    const appointment = await this.appointments.findOne({ where: { id }, relations: { patient: true, doctor: true, items: true } });
     if (!appointment) throw new NotFoundException();
     if (appointment.patientId !== patientId) throw new ForbiddenException();
     return appointment;

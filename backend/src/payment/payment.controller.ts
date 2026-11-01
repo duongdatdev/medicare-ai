@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Headers, HttpCode, Param, ParseIntPipe, Post } from '@nestjs/common';
+import { Body, Controller, Get, Headers, HttpCode, Param, ParseIntPipe, Post, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { CurrentUser, Public, Roles } from '../auth/auth.decorators.js';
 import { PayAppointmentDto, SepayWebhookDto } from './payment.dto.js';
@@ -25,7 +25,7 @@ export class PaymentController {
   }
 
   @Roles('admin')
-  @Get('admin/payments') pending() { return this.payments.pendingPayments(); }
+  @Get('admin/payments') listPayments(@Query('status') status?: string) { return this.payments.payments(status === 'paid' ? 'paid' : 'pending'); }
 
   @Roles('admin')
   @Post('admin/payments/:id/confirm')

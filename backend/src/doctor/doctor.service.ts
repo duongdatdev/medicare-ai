@@ -60,7 +60,7 @@ export class DoctorService {
   }
 
   shiftOverview() {
-    return this.assignments.find({ order: { startTime: 'ASC' } });
+    return this.assignments.find({ where: { status: 'ACTIVE' }, relations: { doctor: true, shift: true }, order: { startTime: 'ASC' } });
   }
 
   async cancelAssignment(doctorId: number, id: number) {
@@ -131,6 +131,18 @@ export class DoctorService {
 
   async listAppointments(doctorId: number, status: number) {
     return this.appointments.find({ where: { doctorId, confirmCondition: status }, order: { apTime: 'ASC' } });
+  }
+
+  async getAppointmentDetail(doctorId: number, appointmentId: number) {
+    const appointment = await this.appointments.findOne({ where: { id: appointmentId }, relations: { patient: true, items: true } });
+    if (!appointment) throw new NotFoundException();
+    if (appointment.doctorId !== doctorId) throw new ForbiddenException();
+    return appointment;
+  }
+
+  async deleteAppointment(doctorId: number, appointmentId: number) {
+    await this.getAppointmentDetail(doctorId, appointmentId);
+    await this.appointments.delete(appointmentId);
   }
 
   async confirmAppointment(doctorId: number, appointmentId: number, note?: string) {
