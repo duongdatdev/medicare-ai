@@ -1,4 +1,4 @@
-import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn, Relation } from 'typeorm';
 import { Appointment } from './appointment.entity.js';
 
 @Entity('appointment_item')
@@ -9,5 +9,5 @@ export class AppointmentItem {
   @Column({ default: true }) bhytCovered: boolean;
   @Column() appointmentId: number;
   @ManyToOne(() => Appointment, (appointment) => appointment.items, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'appointmentId' }) appointment: Appointment;
+  @JoinColumn({ name: 'appointmentId' }) appointment: Relation<Appointment>;
 }
