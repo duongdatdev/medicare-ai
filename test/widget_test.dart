@@ -14,6 +14,7 @@ import 'package:dacn_app/main.dart';
 import 'package:dacn_app/services/session.dart';
 import 'package:dacn_app/models/appointment.dart';
 import 'package:dacn_app/screens/register_patient_screen.dart';
+import 'package:dacn_app/screens/ai_report_screen.dart';
 
 void main() {
   testWidgets('signed-out users see the API login form', (tester) async {
@@ -57,5 +58,27 @@ void main() {
     expect(appointment.doctorId, 4);
     expect(appointment.patientId, 7);
     expect(appointment.rescheduled, isTrue);
+  });
+
+  testWidgets('AI report screen offers image and symptom submission', (
+    tester,
+  ) async {
+    const appointment = Appointment(
+      id: 12,
+      time: null,
+      status: 1,
+      address: 'Clinic',
+      name: 'Dr. Nguyen',
+    );
+    await tester.pumpWidget(
+      const MaterialApp(home: AiReportScreen(appointment: appointment)),
+    );
+
+    expect(find.text('Chưa chọn ảnh'), findsOneWidget);
+    expect(find.text('Thư viện'), findsOneWidget);
+    expect(find.text('Chụp ảnh'), findsOneWidget);
+    expect(find.text('Mô tả triệu chứng'), findsOneWidget);
+    expect(find.text('Phân tích và tạo PDF'), findsOneWidget);
+    expect(find.textContaining('Lịch #12'), findsOneWidget);
   });
 }
