@@ -8,6 +8,6 @@ export class Account {
   @Column({ unique: true }) email: string;
   @Column() passwordHash: string;
   @Column() role: 'admin' | 'doctor' | 'patient';
-  @Column({ nullable: true }) patientId: number | null;
-  @Column({ nullable: true }) doctorId: number | null;
+  @Column({ type: 'int', nullable: true }) patientId: number | null;
+  @Column({ type: 'int', nullable: true }) doctorId: number | null;
 }
