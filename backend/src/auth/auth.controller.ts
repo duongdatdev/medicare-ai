@@ -1,10 +1,18 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Post, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiConsumes } from '@nestjs/swagger';
 import { ApiTags } from '@nestjs/swagger';
 import { Public, Roles } from './auth.decorators.js';
 import { LoginDto, RegisterDoctorDto, RegisterPatientDto } from './auth.dto.js';
 import { AuthService } from './auth.service.js';
 import { BhytService } from '../billing/bhyt.service.js';
 import { BhytLookupDto } from '../billing/bhyt.dto.js';
+
+interface UploadedAvatar { buffer: Buffer; mimetype: string; }
+const avatarUpload = FileInterceptor('avatar', { limits: { fileSize: 2 * 1024 * 1024 }, fileFilter: (_request, file, callback) => {
+  if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.mimetype)) return callback(new BadRequestException('Ảnh đại diện không hợp lệ'), false);
+  callback(null, true);
+} });
 
 @ApiTags('auth')
 @Controller('auth')
@@ -19,8 +27,10 @@ export class AuthController {
 
   @Public()
   @Post('register')
-  register(@Body() input: RegisterPatientDto) {
-    return this.auth.registerPatient(input);
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(avatarUpload)
+  register(@Body() input: RegisterPatientDto, @UploadedFile() avatar?: UploadedAvatar) {
+    return this.auth.registerPatient(input, avatar);
   }
 
   @Public()
@@ -31,7 +41,10 @@ export class AuthController {
 
   @Roles('admin')
   @Post('register-doctor')
-  registerDoctor(@Body() input: RegisterDoctorDto) {
-    return this.auth.registerDoctor(input);
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(avatarUpload)
+  registerDoctor(@Body() input: RegisterDoctorDto, @UploadedFile() avatar?: UploadedAvatar) {
+    if (!avatar) throw new BadRequestException('Ảnh đại diện bác sĩ là bắt buộc');
+    return this.auth.registerDoctor(input, avatar);
   }
 }
