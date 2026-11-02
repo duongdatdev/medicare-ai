@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:printing/printing.dart';
 
 import '../models/appointment.dart';
+import '../services/ai_reports.dart';
 import '../services/appointments.dart';
+import 'ai_report_screen.dart';
 import 're_examination_screen.dart';
 
 class AppointmentDetailScreen extends StatefulWidget {
@@ -10,8 +13,10 @@ class AppointmentDetailScreen extends StatefulWidget {
     required this.doctor,
     super.key,
   });
+
   final Appointment appointment;
   final bool doctor;
+
   @override
   State<AppointmentDetailScreen> createState() =>
       _AppointmentDetailScreenState();
@@ -23,6 +28,7 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
   List<String> _slots = [];
   bool _loadingSlots = false;
   bool _saving = false;
+  bool _loadingReport = false;
 
   @override
   void initState() {
@@ -79,6 +85,24 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
     }
   }
 
+  Future<void> _openDoctorReport() async {
+    setState(() => _loadingReport = true);
+    try {
+      final bytes = await AiReports().doctorReport(widget.appointment.id);
+      await Printing.layoutPdf(
+        onLayout: (_) async => bytes,
+        name: 'report-${widget.appointment.id}.pdf',
+      );
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('$error')));
+      }
+    } finally {
+      if (mounted) setState(() => _loadingReport = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: Text('Chi tiết lịch #${widget.appointment.id}')),
@@ -93,7 +117,7 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
             child: Text('Không tải được chi tiết: ${snapshot.error}'),
           );
         }
-        final detail = snapshot.data!;
+        final detail = snapshot.data ?? const <String, dynamic>{};
         final mayReschedule =
             (widget.doctor
                 ? widget.appointment.status == 0
@@ -151,6 +175,31 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
                   'Lịch này chưa có mã bác sĩ để tra khung giờ trống.',
                 ),
             ],
+            if (!widget.doctor &&
+                widget.appointment.status != 2 &&
+                widget.appointment.cancelReason == null)
+              FilledButton.tonalIcon(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        AiReportScreen(appointment: widget.appointment),
+                  ),
+                ),
+                icon: const Icon(Icons.smart_toy_outlined),
+                label: const Text('Gửi ảnh và triệu chứng cho AI'),
+              ),
+            if (widget.doctor && widget.appointment.cancelReason == null)
+              OutlinedButton.icon(
+                onPressed: _loadingReport ? null : _openDoctorReport,
+                icon: _loadingReport
+                    ? const SizedBox.square(
+                        dimension: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.picture_as_pdf),
+                label: const Text('Mở báo cáo AI của bệnh nhân'),
+              ),
             if (widget.doctor &&
                 widget.appointment.status == 2 &&
                 widget.appointment.patientId != null)
