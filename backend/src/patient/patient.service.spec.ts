@@ -1,4 +1,4 @@
-import { ConflictException } from '@nestjs/common';
+import { ConflictException, ForbiddenException } from '@nestjs/common';
 import { describe, expect, it, vi } from 'vitest';
 import { PatientService } from './patient.service.js';
 import { QueryFailedError } from 'typeorm';
@@ -25,5 +25,25 @@ describe('PatientService', () => {
     await expect(service.createAppointment(8, {
       apTime: '2026-11-12T02:00:00Z', address: 'Clinic', doctorId: 3,
     })).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('denies access to another patient’s appointment', async () => {
+    const appointments = {
+      findOne: vi.fn().mockResolvedValue({ id: 4, patientId: 9 }),
+    };
+    const service = new PatientService({} as never, appointments as never, {} as never);
+
+    await expect(service.getAppointment(8, 4)).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('does not reschedule a canceled appointment or query available slots', async () => {
+    const appointments = {
+      findOne: vi.fn().mockResolvedValue({ id: 4, patientId: 8, confirmCondition: 1, cancelReason: 'busy' }),
+      manager: { query: vi.fn() },
+    };
+    const service = new PatientService({} as never, appointments as never, {} as never);
+
+    await expect(service.rescheduleAppointment(8, 4, { apTime: '2026-11-12T02:00:00Z' })).rejects.toBeInstanceOf(ConflictException);
+    expect(appointments.manager.query).not.toHaveBeenCalled();
   });
 });
