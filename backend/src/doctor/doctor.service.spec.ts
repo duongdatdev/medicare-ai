@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { DoctorService } from './doctor.service.js';
-import { BadRequestException, ConflictException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
 
 describe('DoctorService availability', () => {
   it('lists 30-minute slots only inside assigned shifts and removes booked slots', async () => {
@@ -72,5 +72,24 @@ describe('DoctorService availability', () => {
     await expect(service.registerShift(4, 3, futureDate)).rejects.toBeInstanceOf(ConflictException);
     expect(assignments.count).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ shiftId: 3, status: 'ACTIVE' }) }));
     expect(assignments.save).not.toHaveBeenCalled();
+  });
+
+  it('denies a doctor canceling an appointment owned by another doctor', async () => {
+    const appointments = { findOneBy: vi.fn().mockResolvedValue({ id: 9, doctorId: 5, confirmCondition: 1, cancelReason: null }), save: vi.fn() };
+    const service = new DoctorService({} as never, appointments as never, {} as never, {} as never, {} as never, {} as never, {} as never, {} as never, {} as never);
+
+    await expect(service.cancelAppointment(4, 9, 'reason')).rejects.toBeInstanceOf(ForbiddenException);
+    expect(appointments.save).not.toHaveBeenCalled();
+  });
+
+  it('allows one reschedule into an available slot and marks it as used', async () => {
+    const appointment = { id: 9, doctorId: 4, confirmCondition: 0, rescheduled: false, cancelReason: null, apTime: new Date('2026-11-12T01:00:00Z') };
+    const appointments = { findOneBy: vi.fn().mockResolvedValue(appointment), save: vi.fn(async (value) => value) };
+    const service = new DoctorService({} as never, appointments as never, {} as never, {} as never, {} as never, {} as never, {} as never, {} as never, {} as never);
+    const availableAt = '2026-11-13T01:30:00.000Z';
+    vi.spyOn(service, 'availability').mockResolvedValue([availableAt]);
+
+    await expect(service.rescheduleAppointment(4, 9, availableAt)).resolves.toMatchObject({ apTime: new Date(availableAt), rescheduled: true });
+    expect(appointments.save).toHaveBeenCalledOnce();
   });
 });
