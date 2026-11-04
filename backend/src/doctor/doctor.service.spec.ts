@@ -92,4 +92,25 @@ describe('DoctorService availability', () => {
     await expect(service.rescheduleAppointment(4, 9, availableAt)).resolves.toMatchObject({ apTime: new Date(availableAt), rescheduled: true });
     expect(appointments.save).toHaveBeenCalledOnce();
   });
+
+  it('stores BHYT billing snapshots and disease line items when completing an appointment', async () => {
+    const appointment = { id: 9, doctorId: 4, patientId: 8, confirmCondition: 0, cancelReason: null, paymentStatus: 'unpaid', apTime: new Date('2026-11-12T00:00:00Z') };
+    const patient = { id: 8, cccd: '012345678901', birthDate: '1990-01-01' };
+    const card = { cardNumber: 'AB3123456789012', validFrom: '2026-01-01', validTo: '2026-12-31' };
+    const disease = { id: 2, name: 'Test condition', price: 100000, bhytCovered: true, active: true };
+    const manager = {
+      findOne: vi.fn().mockResolvedValue(appointment),
+      findBy: vi.fn().mockResolvedValue([disease]),
+      findOneBy: vi.fn().mockResolvedValueOnce(patient).mockResolvedValueOnce(card),
+      save: vi.fn(async (_entity, value) => value),
+    };
+    const appointments = { manager: { transaction: vi.fn((work) => work(manager)) } };
+    const service = new DoctorService({} as never, appointments as never, {} as never, {} as never, {} as never, {} as never, {} as never, {} as never, {} as never);
+
+    const result = await service.completeAppointment(4, 9, { diseaseIds: [2] });
+
+    expect(result).toMatchObject({ confirmCondition: 2, examFee: 50000, total: 150000, insuranceRate: 0.95, insuranceCovered: 142500, payable: 7500, insuranceCardNumber: card.cardNumber });
+    expect(manager.save).toHaveBeenNthCalledWith(1, expect.objectContaining({ paymentStatus: 'unpaid', payable: 7500 }));
+    expect(manager.save).toHaveBeenNthCalledWith(2, expect.anything(), [expect.objectContaining({ name: disease.name, appointmentId: 9 })]);
+  });
 });
