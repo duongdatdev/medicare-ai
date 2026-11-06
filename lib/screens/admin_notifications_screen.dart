@@ -28,6 +28,12 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen> {
               () => _unread = (response.data?['count'] as num?)?.toInt() ?? 0,
             );
           }
+        })
+        .catchError((Object error) {
+          if (mounted) {
+            ScaffoldMessenger.of(context)
+                .showSnackBar(SnackBar(content: Text('$error')));
+          }
         });
   }
 

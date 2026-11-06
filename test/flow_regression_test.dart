@@ -2,8 +2,12 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:dacn_app/screens/doctor_shifts_screen.dart';
+import 'package:dacn_app/screens/admin_notifications_screen.dart';
+import 'package:dacn_app/screens/complete_appointment_dialog.dart';
+import 'package:dacn_app/screens/news_feed_screen.dart';
 import 'package:dacn_app/screens/patient_profile_screen.dart';
 import 'package:dacn_app/screens/payment_screen.dart';
+import 'package:dacn_app/main.dart';
 import 'package:dacn_app/services/api.dart';
 import 'package:dacn_app/services/appointments.dart';
 import 'package:dio/dio.dart';
@@ -190,5 +194,185 @@ void main() {
     );
     expect(adapter.requests[1].method, 'PUT');
     expect(adapter.requests[1].path, '/patient/reschedule-appointment/21');
+  });
+
+  testWidgets('doctor completion dialog returns selected bill items', (
+    tester,
+  ) async {
+    final adapter = _StubAdapter(
+      (_) => _json({
+        'items': [
+          {
+            'id': 3,
+            'name': 'Khám tổng quát',
+            'price': 180000,
+            'bhytCovered': true,
+            'active': true,
+          },
+          {
+            'id': 4,
+            'name': 'Soi da',
+            'price': 90000,
+            'bhytCovered': false,
+            'active': true,
+          },
+        ],
+      }),
+    );
+    _useAdapter(adapter);
+    List<int>? selected;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: TextButton(
+              onPressed: () =>
+                  showCompleteAppointmentDialog(context)
+                      .then((value) => selected = value),
+              child: const Text('Mở chẩn đoán'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('Mở chẩn đoán'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Khám tổng quát'), findsOneWidget);
+    expect(find.text('180000 ₫ · BHYT'), findsOneWidget);
+    expect(
+      tester
+          .widget<FilledButton>(find.widgetWithText(FilledButton, 'Hoàn tất'))
+          .onPressed,
+      isNull,
+    );
+    await tester.tap(find.text('Khám tổng quát'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Hoàn tất'));
+    await tester.pumpAndSettle();
+
+    expect(selected, [3]);
+    expect(adapter.requests.single.path, '/diseases');
+  });
+
+  testWidgets('news feed renders records from the public news contract', (
+    tester,
+  ) async {
+    final adapter = _StubAdapter(
+      (request) => _json([
+        {
+          'id': 5,
+          'title': 'Tiêm chủng mùa thu',
+          'url': 'https://clinic.example/news/5',
+          'createdAt': '2026-11-10T09:00:00Z',
+        },
+      ]),
+    );
+    _useAdapter(adapter);
+
+    await tester.pumpWidget(const MaterialApp(home: NewsFeedScreen()));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Tin tức phòng khám'), findsOneWidget);
+    expect(find.text('Tiêm chủng mùa thu'), findsOneWidget);
+    expect(adapter.requests.single.path, '/news?limit=20');
+  });
+
+  testWidgets('admin notifications load unread count and mark all read', (
+    tester,
+  ) async {
+    final adapter = _StubAdapter((request) {
+      if (request.path.endsWith('unread-count')) return _json({'count': 2});
+      if (request.path.endsWith('read-all')) return _json({'updated': 2});
+      return _json([
+        {
+          'id': 8,
+          'title': 'Đã nhận thanh toán',
+          'body': 'Lịch #21',
+          'readAt': null,
+        },
+      ]);
+    });
+    _useAdapter(adapter);
+
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: AdminNotificationsScreen())),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Chưa đọc: 2'), findsOneWidget);
+    expect(find.text('Đã nhận thanh toán'), findsOneWidget);
+    await tester.tap(find.text('Đánh dấu đã đọc'));
+    await tester.pumpAndSettle();
+
+    expect(
+      adapter.requests.any(
+        (request) =>
+            request.method == 'POST' &&
+            request.path == '/admin/notifications/read-all',
+      ),
+      isTrue,
+    );
+  });
+
+  testWidgets(
+    'notification unread-count failure is surfaced without crashing',
+    (tester) async {
+      final adapter = _StubAdapter((request) {
+        if (request.path.endsWith('unread-count')) {
+          return ResponseBody.fromString('temporarily unavailable', 503);
+        }
+        return _json([
+          {
+            'id': 9,
+            'title': 'Bản tin vẫn tải được',
+            'body': '',
+            'readAt': null,
+          },
+        ]);
+      });
+      _useAdapter(adapter);
+
+      await tester.pumpWidget(
+        const MaterialApp(home: Scaffold(body: AdminNotificationsScreen())),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Bản tin vẫn tải được'), findsOneWidget);
+      expect(find.byType(SnackBar), findsOneWidget);
+    },
+  );
+
+  testWidgets('role navigation opens patient profile and admin payments', (
+    tester,
+  ) async {
+    final adapter = _StubAdapter((request) {
+      if (request.path == '/news?limit=20') return _json([]);
+      if (request.path == '/patient/me') {
+        return _json({'name': 'Lan Nguyen'});
+      }
+      if (request.path.endsWith('unread-count')) return _json({'count': 0});
+      if (request.path.startsWith('/admin/')) return _json([]);
+      return _json([]);
+    });
+    _useAdapter(adapter);
+
+    await tester.pumpWidget(const MaterialApp(home: RoleHome(role: 'patient')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Hồ sơ'));
+    await tester.pumpAndSettle();
+    expect(find.text('Hồ sơ bệnh nhân'), findsOneWidget);
+
+    await tester.pumpWidget(const MaterialApp(home: RoleHome(role: 'admin')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Thanh toán'));
+    await tester.pumpAndSettle();
+    expect(find.text('Không có giao dịch'), findsOneWidget);
+    expect(
+      adapter.requests.any(
+        (request) => request.path == '/admin/payments?status=pending',
+      ),
+      isTrue,
+    );
   });
 }
