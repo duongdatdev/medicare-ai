@@ -5,9 +5,15 @@ import { AiService } from './ai.service.js';
 describe('AI report access', () => {
   it('rejects a patient attaching a report to another patient appointment', async () => {
     const appointments = { findOneBy: vi.fn().mockResolvedValue({ id: 7, patientId: 22 }) };
-    const service = new AiService({ get: () => 'http://localhost:8000' } as never, appointments as never, {} as never);
+    const reports = { create: vi.fn(), save: vi.fn() };
+    const service = new AiService({ get: () => 'http://localhost:8000' } as never, appointments as never, reports as never);
+    const diagnose = vi.spyOn(service, 'diagnose');
+    const chat = vi.spyOn(service, 'chat');
 
     await expect(service.report(23, undefined, 'symptoms', 7)).rejects.toBeInstanceOf(ForbiddenException);
+    expect(diagnose).not.toHaveBeenCalled();
+    expect(chat).not.toHaveBeenCalled();
+    expect(reports.save).not.toHaveBeenCalled();
   });
 
   it('checks doctor ownership before returning a stored PDF', async () => {
