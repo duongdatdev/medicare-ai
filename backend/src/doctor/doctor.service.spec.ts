@@ -113,4 +113,24 @@ describe('DoctorService availability', () => {
     expect(manager.save).toHaveBeenNthCalledWith(1, expect.objectContaining({ paymentStatus: 'unpaid', payable: 7500 }));
     expect(manager.save).toHaveBeenNthCalledWith(2, expect.anything(), [expect.objectContaining({ name: disease.name, appointmentId: 9 })]);
   });
+
+  it('rejects a doctor reschedule when the requested slot is no longer available', async () => {
+    const appointment = { id: 9, doctorId: 4, confirmCondition: 0, rescheduled: false, cancelReason: null, apTime: new Date('2026-11-12T01:00:00Z') };
+    const appointments = { findOneBy: vi.fn().mockResolvedValue(appointment), save: vi.fn() };
+    const service = new DoctorService({} as never, appointments as never, {} as never, {} as never, {} as never, {} as never, {} as never, {} as never, {} as never);
+    vi.spyOn(service, 'availability').mockResolvedValue([]);
+
+    await expect(service.rescheduleAppointment(4, 9, '2026-11-13T01:30:00Z')).rejects.toBeInstanceOf(ConflictException);
+    expect(appointment.apTime).toEqual(new Date('2026-11-12T01:00:00Z'));
+    expect(appointments.save).not.toHaveBeenCalled();
+  });
+
+  it('prevents a doctor from completing another doctor’s appointment', async () => {
+    const manager = { findOne: vi.fn().mockResolvedValue({ id: 9, doctorId: 5, confirmCondition: 0, cancelReason: null }), save: vi.fn() };
+    const appointments = { manager: { transaction: (work: (manager: typeof manager) => unknown) => work(manager) } };
+    const service = new DoctorService({} as never, appointments as never, {} as never, {} as never, {} as never, {} as never, {} as never, {} as never, {} as never);
+
+    await expect(service.completeAppointment(4, 9, { diseaseIds: [2] })).rejects.toBeInstanceOf(ForbiddenException);
+    expect(manager.save).not.toHaveBeenCalled();
+  });
 });
