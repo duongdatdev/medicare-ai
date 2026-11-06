@@ -133,4 +133,23 @@ describe('DoctorService availability', () => {
     await expect(service.completeAppointment(4, 9, { diseaseIds: [2] })).rejects.toBeInstanceOf(ForbiddenException);
     expect(manager.save).not.toHaveBeenCalled();
   });
+
+  it('marks a fully covered completed invoice as paid without opening payment collection', async () => {
+    const appointment = { id: 9, doctorId: 4, patientId: 8, confirmCondition: 0, cancelReason: null, paymentStatus: 'unpaid', apTime: new Date('2026-11-12T00:00:00Z') };
+    const manager = {
+      findOne: vi.fn().mockResolvedValue(appointment),
+      findBy: vi.fn().mockResolvedValue([{ id: 2, name: 'Covered condition', price: 10000, bhytCovered: true, active: true }]),
+      findOneBy: vi.fn().mockResolvedValueOnce({ id: 8, cccd: '012345678901', birthDate: '1990-01-01' })
+        .mockResolvedValueOnce({ cardNumber: 'AB1123456789012', validFrom: '2026-01-01', validTo: '2026-12-31' }),
+      save: vi.fn(async (_entity, value) => value),
+    };
+    const appointments = { manager: { transaction: (work: (manager: typeof manager) => unknown) => work(manager) } };
+    const service = new DoctorService({} as never, appointments as never, {} as never, {} as never, {} as never, {} as never, {} as never, {} as never, {} as never);
+
+    const result = await service.completeAppointment(4, 9, { diseaseIds: [2] });
+
+    expect(result.payable).toBe(0);
+    expect(appointment).toMatchObject({ paymentStatus: 'paid', payable: 0 });
+    expect(appointment.paidAt).toBeInstanceOf(Date);
+  });
 });
