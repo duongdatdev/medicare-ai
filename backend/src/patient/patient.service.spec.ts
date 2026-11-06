@@ -46,4 +46,19 @@ describe('PatientService', () => {
     await expect(service.rescheduleAppointment(8, 4, { apTime: '2026-11-12T02:00:00Z' })).rejects.toBeInstanceOf(ConflictException);
     expect(appointments.manager.query).not.toHaveBeenCalled();
   });
+
+  it('moves a confirmed appointment back to pending after rescheduling into a free slot', async () => {
+    const appointment = { id: 4, patientId: 8, doctorId: 3, confirmCondition: 0, rescheduled: false, cancelReason: null, note: null };
+    const appointments = {
+      findOne: vi.fn().mockResolvedValue(appointment),
+      manager: { query: vi.fn().mockResolvedValue([{ '?column?': 1 }]) },
+      save: vi.fn(async (value) => value),
+    };
+    const service = new PatientService({} as never, appointments as never, {} as never);
+
+    await expect(service.rescheduleAppointment(8, 4, { apTime: '2026-11-13T02:00:00Z', note: 'New time' })).resolves.toMatchObject({
+      apTime: new Date('2026-11-13T02:00:00Z'), confirmCondition: 1, rescheduled: true, note: 'New time',
+    });
+    expect(appointments.manager.query).toHaveBeenCalledWith(expect.stringContaining('a."id" <> $3'), [3, '2026-11-13T02:00:00Z', 4]);
+  });
 });
