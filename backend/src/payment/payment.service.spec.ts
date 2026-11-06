@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { ServiceUnavailableException, UnauthorizedException } from '@nestjs/common';
 import { PaymentService } from './payment.service.js';
 
 describe('PaymentService SePay webhook', () => {
@@ -45,5 +46,18 @@ describe('PaymentService SePay webhook', () => {
     expect(appointment).toMatchObject({ paymentStatus: 'pending', paidAt: null });
     expect(manager.save).toHaveBeenCalledOnce();
     expect(manager.save).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ title: 'Giao dịch cần kiểm tra', appointmentId: 12 }));
+  });
+
+  it('accepts the Apikey authorization scheme and rejects an incorrect secret', () => {
+    const service = new PaymentService({} as never, {} as never, {} as never, { get: () => 'expected-secret' } as never);
+
+    expect(() => service.assertWebhookKey('Apikey expected-secret')).not.toThrow();
+    expect(() => service.assertWebhookKey('wrong-secret')).toThrow(UnauthorizedException);
+  });
+
+  it('fails closed when no webhook key is configured', () => {
+    const service = new PaymentService({} as never, {} as never, {} as never, { get: () => undefined } as never);
+
+    expect(() => service.assertWebhookKey('anything')).toThrow(ServiceUnavailableException);
   });
 });
