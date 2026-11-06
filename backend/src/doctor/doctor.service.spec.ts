@@ -82,6 +82,17 @@ describe('DoctorService availability', () => {
     expect(appointments.save).not.toHaveBeenCalled();
   });
 
+  it('retains a canceled appointment while recording its reason and actor', async () => {
+    const appointment = { id: 9, doctorId: 4, confirmCondition: 1, cancelReason: null, canceledBy: null };
+    const appointments = { findOneBy: vi.fn().mockResolvedValue(appointment), save: vi.fn(async (value) => value) };
+    const service = new DoctorService({} as never, appointments as never, {} as never, {} as never, {} as never, {} as never, {} as never, {} as never, {} as never);
+
+    await expect(service.cancelAppointment(4, 9, 'Doctor unavailable')).resolves.toMatchObject({
+      id: 9, confirmCondition: 1, cancelReason: 'Doctor unavailable', canceledBy: 'doctor',
+    });
+    expect(appointments.save).toHaveBeenCalledOnce();
+  });
+
   it('allows one reschedule into an available slot and marks it as used', async () => {
     const appointment = { id: 9, doctorId: 4, confirmCondition: 0, rescheduled: false, cancelReason: null, apTime: new Date('2026-11-12T01:00:00Z') };
     const appointments = { findOneBy: vi.fn().mockResolvedValue(appointment), save: vi.fn(async (value) => value) };
