@@ -12,7 +12,7 @@ A clinic appointment, examination, insurance billing, and payment app. The repos
 
 ## Start locally
 
-1. Create a PostgreSQL database for local development.
+1. Start the local PostgreSQL container with `docker compose up -d postgres`. Set `DB_USER`, `DB_PASSWORD`, `DB_NAME`, or `DB_PORT` in the repository-root environment when you need different local credentials.
 2. In `backend/`, copy `.env.example` to `.env`, set the database connection, `JWT_SECRET`, and bootstrap admin credentials. Bootstrap credentials must be at least 12 characters. The first API startup creates the admin only when both bootstrap values are configured.
 3. Install and start the API from `backend/` with `npm ci` and `npm run start:dev`. TypeORM runs checked-in migrations at startup. Database synchronization is disabled.
 4. In `ai_service/`, create a virtual environment, install `requirements.txt`, and copy `.env.example` to `.env`. Set `MODEL_PTH` to the supplied Swin V2 checkpoint and configure `GEMINI_API_KEY` for symptom chat. Start the service with `uvicorn ai_service.app:app --host 0.0.0.0 --port 8000` from the repository root.
