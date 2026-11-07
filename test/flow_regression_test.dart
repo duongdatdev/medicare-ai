@@ -4,9 +4,12 @@ import 'dart:typed_data';
 import 'package:dacn_app/screens/doctor_shifts_screen.dart';
 import 'package:dacn_app/screens/admin_notifications_screen.dart';
 import 'package:dacn_app/screens/complete_appointment_dialog.dart';
+import 'package:dacn_app/screens/appointments_screen.dart';
+import 'package:dacn_app/screens/appointment_detail_screen.dart';
 import 'package:dacn_app/screens/news_feed_screen.dart';
 import 'package:dacn_app/screens/patient_profile_screen.dart';
 import 'package:dacn_app/screens/payment_screen.dart';
+import 'package:dacn_app/models/appointment.dart';
 import 'package:dacn_app/main.dart';
 import 'package:dacn_app/services/api.dart';
 import 'package:dacn_app/services/appointments.dart';
@@ -374,5 +377,175 @@ void main() {
       ),
       isTrue,
     );
+  });
+
+  testWidgets('doctor completes an appointment with selected disease IDs', (
+    tester,
+  ) async {
+    final adapter = _StubAdapter((request) {
+      if (request.path == '/doctor/list-appointment') {
+        return _json([
+          {
+            'id': 31,
+            'apTime': '2026-11-12T09:00:00.000Z',
+            'confirmCondition': 0,
+            'address': 'Clinic',
+            'doctorName': 'Dr. Nguyen',
+            'patientName': 'Lan Nguyen',
+          },
+        ]);
+      }
+      if (request.path == '/diseases') {
+        return _json({
+          'items': [
+            {
+              'id': 6,
+              'name': 'Khám tổng quát',
+              'price': 180000,
+              'bhytCovered': true,
+              'active': true,
+            },
+          ],
+        });
+      }
+      return _json({'ok': true});
+    });
+    _useAdapter(adapter);
+
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: AppointmentsScreen(doctor: true))),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Đã xác nhận'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Chẩn đoán và hoàn tất khám'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Khám tổng quát'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Hoàn tất'));
+    await tester.pumpAndSettle();
+
+    final completion = adapter.requests.singleWhere(
+      (request) => request.path == '/doctor/complete/31',
+    );
+    expect(completion.method, 'POST');
+    expect((completion.data as Map<String, dynamic>)['diseaseIds'], [6]);
+  });
+
+  testWidgets('doctor role navigation opens shift management', (tester) async {
+    final adapter = _StubAdapter(
+      (request) => _json(request.path.endsWith('shift-templates') ? [] : []),
+    );
+    _useAdapter(adapter);
+
+    await tester.pumpWidget(const MaterialApp(home: RoleHome(role: 'doctor')));
+    await tester.pumpAndSettle();
+    expect(find.text('Lịch khám'), findsWidgets);
+    await tester.tap(find.text('Ca trực'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Đăng ký ca'), findsOneWidget);
+    expect(
+      adapter.requests.any((request) => request.path == '/doctor/my-shifts'),
+      isTrue,
+    );
+    expect(
+      adapter.requests.any(
+        (request) => request.path == '/doctor/shift-templates',
+      ),
+      isTrue,
+    );
+  });
+
+  testWidgets('patient confirms cancellation with a reason', (tester) async {
+    final adapter = _StubAdapter(
+      (_) => _json([
+        {
+          'id': 44,
+          'apTime': '2026-11-12T09:00:00.000Z',
+          'confirmCondition': 1,
+          'address': 'Clinic',
+          'doctorName': 'Dr. Nguyen',
+        },
+      ]),
+    );
+    _useAdapter(adapter);
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(body: AppointmentsScreen(doctor: false)),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Hủy lịch'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'Không thể đến khám');
+    await tester.tap(find.text('Xác nhận'));
+    await tester.pumpAndSettle();
+
+    final cancel = adapter.requests.singleWhere(
+      (request) => request.path == '/patient/cancel-appointment/44',
+    );
+    expect(cancel.method, 'POST');
+    expect(
+      (cancel.data as Map<String, dynamic>)['reason'],
+      'Không thể đến khám',
+    );
+  });
+
+  testWidgets('patient reschedules from detail using an available slot', (
+    tester,
+  ) async {
+    final day = DateTime.now().add(const Duration(days: 1));
+    final slot = DateTime(
+      day.year,
+      day.month,
+      day.day,
+      10,
+      30,
+    ).toIso8601String();
+    final adapter = _StubAdapter((request) {
+      if (request.path == '/patient/appointment/44') {
+        return _json({
+          'id': 44,
+          'apTime': '2026-11-12T09:00:00.000Z',
+          'confirmCondition': 1,
+          'address': 'Clinic',
+          'doctorName': 'Dr. Nguyen',
+        });
+      }
+      if (request.path == '/doctor/availability') return _json([slot]);
+      return _json({'ok': true});
+    });
+    _useAdapter(adapter);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AppointmentDetailScreen(
+          appointment: Appointment(
+            id: 44,
+            time: DateTime.parse('2026-11-12T09:00:00.000Z'),
+            status: 1,
+            address: 'Clinic',
+            doctorId: 9,
+            name: 'Dr. Nguyen',
+          ),
+          doctor: false,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Chọn ngày đổi lịch'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(ActionChip).first);
+    await tester.pumpAndSettle();
+
+    final reschedule = adapter.requests.singleWhere(
+      (request) => request.path == '/patient/reschedule-appointment/44',
+    );
+    expect(reschedule.method, 'PUT');
+    expect((reschedule.data as Map<String, dynamic>)['apTime'], isA<String>());
   });
 }
