@@ -52,6 +52,33 @@ def test_predict_rejects_corrupted_image():
     assert response.status_code == 400
 
 
+def test_predict_returns_service_unavailable_without_checkpoint(monkeypatch):
+    service.get_classifier.cache_clear()
+    monkeypatch.setattr(
+        "ai_service.classifier.SkinDiseaseClassifier.from_environment",
+        lambda service_dir: (_ for _ in ()).throw(FileNotFoundError("checkpoint missing")),
+    )
+    image = Image.new("RGB", (2, 2), "white")
+    buffer = BytesIO()
+    image.save(buffer, format="PNG")
+
+    response = client.post("/predict", files={"file": ("photo.png", buffer.getvalue(), "image/png")})
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == "checkpoint missing"
+    service.get_classifier.cache_clear()
+
+
+def test_predict_rejects_oversized_image_before_loading_model(monkeypatch):
+    monkeypatch.setattr(service, "get_classifier", lambda: (_ for _ in ()).throw(AssertionError("model must not load")))
+    response = client.post(
+        "/predict",
+        files={"file": ("large.png", b"x" * (service.MAX_IMAGE_BYTES + 1), "image/png")},
+    )
+
+    assert response.status_code == 413
+
+
 def test_predict_returns_top_three_when_classifier_is_available(monkeypatch):
     expected = [{"disease": "eczema", "confidence": 0.7}]
 
@@ -76,6 +103,11 @@ def test_chat_requires_non_empty_symptoms():
     assert response.status_code == 400
 
 
+def test_chat_requires_symptoms_field():
+    response = client.post("/chat", json={})
+    assert response.status_code == 422
+
+
 def test_chat_returns_gemini_candidates(monkeypatch):
     expected = [{"disease": "eczema", "confidence": 0.7, "reason": "ngứa"}]
     monkeypatch.setattr("ai_service.symptom_analyzer.analyze_symptoms", lambda symptoms, service_dir: expected)
@@ -88,3 +120,14 @@ def test_chat_reports_missing_key_as_service_unavailable(monkeypatch):
     monkeypatch.setattr("ai_service.symptom_analyzer.analyze_symptoms", lambda *args: (_ for _ in ()).throw(RuntimeError("GEMINI_API_KEY is missing")))
     response = client.post("/chat", json={"symptoms": "itchy rash"})
     assert response.status_code == 503
+
+
+def test_chat_reports_gemini_failures_as_server_errors(monkeypatch):
+    monkeypatch.setattr(
+        "ai_service.symptom_analyzer.analyze_symptoms",
+        lambda *args: (_ for _ in ()).throw(ConnectionError("Gemini unavailable")),
+    )
+    response = client.post("/chat", json={"symptoms": "itchy rash"})
+
+    assert response.status_code == 500
+    assert response.json()["detail"] == "Lỗi gọi Gemini: Gemini unavailable"

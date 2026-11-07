@@ -17,6 +17,7 @@ SERVICE_DIR = Path(__file__).resolve().parent
 load_dotenv(SERVICE_DIR / ".env")
 
 app = FastAPI(title="DACN AI Service", version="1.0.0")
+MAX_IMAGE_BYTES = 10 * 1024 * 1024
 
 
 @lru_cache(maxsize=1)
@@ -41,14 +42,18 @@ async def predict(file: Annotated[UploadFile, File()]):
         raise HTTPException(status_code=400, detail="File phải là ảnh.")
 
     try:
-        raw = await file.read()
+        raw = await file.read(MAX_IMAGE_BYTES + 1)
+        if len(raw) > MAX_IMAGE_BYTES:
+            raise HTTPException(status_code=413, detail="Ảnh vượt quá giới hạn 10 MB.")
         with Image.open(io.BytesIO(raw)) as image:
             image.load()
             results = get_classifier().predict_topk(image, k=3)
-    except (UnidentifiedImageError, OSError, ValueError):
-        raise HTTPException(status_code=400, detail="Không đọc được ảnh.") from None
     except FileNotFoundError as error:
         raise HTTPException(status_code=503, detail=str(error)) from None
+    except HTTPException:
+        raise
+    except (UnidentifiedImageError, OSError, ValueError):
+        raise HTTPException(status_code=400, detail="Không đọc được ảnh.") from None
     except Exception as error:
         raise HTTPException(status_code=500, detail=f"Lỗi inference: {error}") from None
 
