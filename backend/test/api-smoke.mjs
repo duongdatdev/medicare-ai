@@ -71,6 +71,22 @@ const register = await request('/auth/register', {
 assert.equal(register.status, 201, 'A new patient should be able to register');
 const patientToken = register.body.accessToken;
 
+const duplicateEmail = await request('/auth/register', {
+  method: 'POST',
+  body: {
+    email: patientEmail,
+    password: 'smoke-test-password',
+    name: 'Duplicate Patient',
+    gender: 'other',
+    age: 31,
+    birthDate: '1995-02-03',
+    phone: '0900000000',
+    address: 'Smoke test only',
+    cccd: suffix.slice(-12).padStart(12, '2'),
+  },
+});
+assert.equal(duplicateEmail.status, 409, 'Patient email addresses must be unique');
+
 const profile = await request('/patient/me', { token: patientToken });
 assert.equal(profile.status, 200);
 assert.equal(profile.body.name, 'Smoke Test Patient');
