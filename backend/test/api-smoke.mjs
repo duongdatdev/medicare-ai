@@ -87,6 +87,22 @@ const duplicateEmail = await request('/auth/register', {
 });
 assert.equal(duplicateEmail.status, 409, 'Patient email addresses must be unique');
 
+const duplicateIdentity = await request('/auth/register', {
+  method: 'POST',
+  body: {
+    email: `duplicate-${suffix}@example.test`,
+    password: 'smoke-test-password',
+    name: 'Duplicate Identity',
+    gender: 'other',
+    age: 31,
+    birthDate: '1995-02-03',
+    phone: '0900000000',
+    address: 'Smoke test only',
+    cccd,
+  },
+});
+assert.equal(duplicateIdentity.status, 409, 'Patient identity numbers must be unique');
+
 const profile = await request('/patient/me', { token: patientToken });
 assert.equal(profile.status, 200);
 assert.equal(profile.body.name, 'Smoke Test Patient');
