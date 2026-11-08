@@ -27,6 +27,7 @@ cd backend
 npm ci
 npm run build
 npm test
+npm run test:smoke
 cd ..
 flutter analyze
 flutter test
