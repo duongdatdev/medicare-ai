@@ -38,6 +38,22 @@ assert.equal(salaryList.status, 200, 'Admin should be able to read salary summar
 const suffix = `${Date.now()}${Math.floor(Math.random() * 1000)}`;
 const cccd = suffix.slice(-12).padStart(12, '1');
 const patientEmail = `smoke-${suffix}@example.test`;
+const invalidIdentity = await request('/auth/register', {
+  method: 'POST',
+  body: {
+    email: `invalid-${suffix}@example.test`,
+    password: 'smoke-test-password',
+    name: 'Invalid Identity',
+    gender: 'other',
+    age: 31,
+    birthDate: '1995-02-03',
+    phone: '0900000000',
+    address: 'Smoke test only',
+    cccd: 'not-a-valid-cccd',
+  },
+});
+assert.equal(invalidIdentity.status, 400, 'Invalid identity numbers should be rejected');
+
 const register = await request('/auth/register', {
   method: 'POST',
   body: {
@@ -69,4 +85,4 @@ const unknownInsurance = await request('/auth/bhyt-lookup', {
 assert.equal(unknownInsurance.status, 201);
 assert.deepEqual(unknownInsurance.body, { found: false });
 
-console.log('API smoke passed: admin login, patient registration/profile, role guard, and BHYT lookup.');
+console.log('API smoke passed: admin login, patient validation/registration/profile, role guard, and BHYT lookup.');
