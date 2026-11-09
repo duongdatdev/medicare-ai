@@ -110,6 +110,9 @@ assert.equal(profile.body.name, 'Smoke Test Patient');
 const forbiddenAdminRoute = await request('/admin/doctor-salaries', { token: patientToken });
 assert.equal(forbiddenAdminRoute.status, 403, 'Patient tokens must not access admin routes');
 
+const unauthenticatedProfile = await request('/patient/me');
+assert.equal(unauthenticatedProfile.status, 401, 'Private patient data requires authentication');
+
 const unknownInsurance = await request('/auth/bhyt-lookup', {
   method: 'POST',
   body: { cccd: '999999999999', birthDate: '1990-01-01' },
