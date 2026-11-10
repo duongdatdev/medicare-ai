@@ -35,3 +35,7 @@ python -m pytest ai_service/test_service.py -q
 ```
 
 The AI route tests run without model weights or a Gemini key. Those files are local runtime assets and must not be committed. Keep all credentials in ignored `.env` files.
+
+## Reconstructed history
+
+The commit dates in this rewrite are reconstructed sequencing dates from October 20 through November 10, 2026. They record the staged rewrite timeline and do not claim to be the original timestamps of the DACN source changes. Commit messages follow Conventional Commits, and the history stays attributable to the current repository author.
