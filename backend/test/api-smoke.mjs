@@ -112,6 +112,8 @@ assert.equal(forbiddenAdminRoute.status, 403, 'Patient tokens must not access ad
 
 const unauthenticatedProfile = await request('/patient/me');
 assert.equal(unauthenticatedProfile.status, 401, 'Private patient data requires authentication');
+const invalidTokenProfile = await request('/patient/me', { token: 'invalid-token' });
+assert.equal(invalidTokenProfile.status, 401, 'Invalid bearer tokens must be rejected');
 
 const unknownInsurance = await request('/auth/bhyt-lookup', {
   method: 'POST',
