@@ -10,10 +10,14 @@ class Session extends ChangeNotifier {
   static const _tokenKey = 'accessToken';
   static const _roleKey = 'role';
   static const _doctorIdKey = 'doctorId';
+  static const _nameKey = 'userName';
+  static const _avatarUrlKey = 'avatarUrl';
   final Dio _http;
   String? token;
   String? role;
   int? doctorId;
+  String? name;
+  String? avatarUrl;
   bool loading = true;
   bool get signedIn => token != null && role != null;
 
@@ -22,6 +26,8 @@ class Session extends ChangeNotifier {
     token = prefs.getString(_tokenKey);
     role = prefs.getString(_roleKey);
     doctorId = prefs.getInt(_doctorIdKey);
+    name = prefs.getString(_nameKey);
+    avatarUrl = prefs.getString(_avatarUrlKey);
     loading = false;
     notifyListeners();
   }
@@ -41,7 +47,23 @@ class Session extends ChangeNotifier {
     await prefs.setString(_tokenKey, accessToken);
     await prefs.setString(_roleKey, accountRole);
     doctorId = (body?['doctorId'] as num?)?.toInt();
-    if (doctorId != null) await prefs.setInt(_doctorIdKey, doctorId!);
+    if (doctorId != null) {
+      await prefs.setInt(_doctorIdKey, doctorId!);
+    } else {
+      await prefs.remove(_doctorIdKey);
+    }
+    name = (body?['name'] as String?)?.trim();
+    if (name != null && name!.isNotEmpty) {
+      await prefs.setString(_nameKey, name!);
+    } else {
+      await prefs.remove(_nameKey);
+    }
+    avatarUrl = (body?['avatarUrl'] as String?)?.trim();
+    if (avatarUrl != null && avatarUrl!.isNotEmpty) {
+      await prefs.setString(_avatarUrlKey, avatarUrl!);
+    } else {
+      await prefs.remove(_avatarUrlKey);
+    }
     token = accessToken;
     role = accountRole;
     notifyListeners();
@@ -52,9 +74,13 @@ class Session extends ChangeNotifier {
     await prefs.remove(_tokenKey);
     await prefs.remove(_roleKey);
     await prefs.remove(_doctorIdKey);
+    await prefs.remove(_nameKey);
+    await prefs.remove(_avatarUrlKey);
     token = null;
     role = null;
     doctorId = null;
+    name = null;
+    avatarUrl = null;
     notifyListeners();
   }
 }

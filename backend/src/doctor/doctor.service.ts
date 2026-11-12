@@ -133,7 +133,11 @@ export class DoctorService {
   }
 
   async listAppointments(doctorId: number, status: number) {
-    return this.appointments.find({ where: { doctorId, confirmCondition: status }, order: { apTime: 'ASC' } });
+    return this.appointments.find({
+      where: { doctorId, confirmCondition: status },
+      relations: { patient: true },
+      order: { apTime: 'ASC' },
+    });
   }
 
   async getAppointmentDetail(doctorId: number, appointmentId: number) {

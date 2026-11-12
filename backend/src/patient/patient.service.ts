@@ -6,6 +6,7 @@ import { Appointment } from './appointment.entity.js';
 import { CreateAppointmentDto } from './appointment.dto.js';
 import { RescheduleAppointmentDto } from './appointment.dto.js';
 import { BhytService } from '../billing/bhyt.service.js';
+import { Doctor } from '../doctor/doctor.entity.js';
 
 @Injectable()
 export class PatientService {
@@ -29,7 +30,11 @@ export class PatientService {
     return this.patients.save(patient);
   }
 
-  createAppointment(patientId: number, input: CreateAppointmentDto) {
+  async createAppointment(patientId: number, input: CreateAppointmentDto) {
+    const doctor = await this.appointments.manager.findOne(Doctor, {
+      where: { id: input.doctorId },
+    });
+    if (!doctor) throw new NotFoundException('Không tìm thấy bác sĩ');
     const appointment = this.appointments.create({
       apTime: new Date(input.apTime),
       confirmDate: null,
@@ -40,7 +45,7 @@ export class PatientService {
       cancelReason: null,
       canceledBy: null,
       rescheduled: false,
-      doctorName: '',
+      doctorName: doctor.name,
       patientId,
       doctorId: input.doctorId,
     });

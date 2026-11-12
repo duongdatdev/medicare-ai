@@ -26,6 +26,18 @@ class Api {
   static final instance = Api._();
   late final Dio client;
 
+  /// Resolves relative upload paths (e.g. `/uploads/...`) against [client.options.baseUrl].
+  String? resolveUrl(String? path) {
+    final trimmed = path?.trim() ?? '';
+    if (trimmed.isEmpty) return null;
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      return trimmed;
+    }
+    final base = client.options.baseUrl.replaceAll(RegExp(r'/+$'), '');
+    final rel = trimmed.startsWith('/') ? trimmed : '/$trimmed';
+    return '$base$rel';
+  }
+
   Future<List<dynamic>> list(String path) async {
     final response = await client.get(path);
     if (response.data is! List) {

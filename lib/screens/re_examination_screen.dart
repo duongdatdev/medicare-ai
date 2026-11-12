@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
 import '../services/api.dart';
-import '../services/session.dart';
+import '../utils/formatters.dart';
+import '../widgets/clinic_widgets.dart';
 
 class ReExaminationScreen extends StatefulWidget {
   const ReExaminationScreen({required this.patientId, super.key});
   final int patientId;
+
   @override
   State<ReExaminationScreen> createState() => _ReExaminationScreenState();
 }
@@ -19,6 +20,7 @@ class _ReExaminationScreenState extends State<ReExaminationScreen> {
   String? _slot;
   bool _loading = false;
   bool _saving = false;
+  String? _error;
 
   Future<void> _chooseDate(int doctorId) async {
     final date = await showDatePicker(
@@ -32,21 +34,22 @@ class _ReExaminationScreenState extends State<ReExaminationScreen> {
       _date = date;
       _loading = true;
       _slot = null;
+      _error = null;
     });
     try {
       final response = await Api.instance.client.get<List<dynamic>>(
         '/doctor/availability',
         queryParameters: {
           'doctorId': doctorId,
-          'date':
-              '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}',
+          'date': formatDateApi(date),
         },
       );
       _slots = (response.data ?? []).cast<String>();
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('$error')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(formatApiError(error))));
       }
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -54,17 +57,21 @@ class _ReExaminationScreenState extends State<ReExaminationScreen> {
   }
 
   Future<void> _save() async {
-    final doctorId = context.read<Session>().doctorId;
+    final doctorId = maybeSession(context, listen: false)?.doctorId;
     if (doctorId == null || _slot == null || _address.text.trim().isEmpty) {
+      setState(() => _error = 'Chọn ngày, khung giờ và nhập địa chỉ khám');
       return;
     }
-    setState(() => _saving = true);
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
     try {
       await Api.instance.client.post(
         '/doctor/re-examination',
         data: {
           'patientId': widget.patientId,
-          'apTime': DateTime.parse(_slot!).toLocal().toIso8601String(),
+          'apTime': _slot!,
           'address': _address.text.trim(),
           'note': _note.text.trim(),
         },
@@ -72,8 +79,9 @@ class _ReExaminationScreenState extends State<ReExaminationScreen> {
       if (mounted) Navigator.pop(context, true);
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('$error')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(formatApiError(error))));
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -89,54 +97,118 @@ class _ReExaminationScreenState extends State<ReExaminationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final doctorId = context.watch<Session>().doctorId;
+    final doctorId = maybeSession(context)?.doctorId;
     return Scaffold(
       appBar: AppBar(title: const Text('Đặt lịch tái khám')),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          OutlinedButton.icon(
-            onPressed: doctorId == null ? null : () => _chooseDate(doctorId),
-            icon: const Icon(Icons.calendar_month),
-            label: Text(
-              '${_date.day}/${_date.month}/${_date.year} · Chọn ngày',
-            ),
-          ),
-          if (_loading)
-            const Center(child: CircularProgressIndicator())
-          else
-            Wrap(
-              spacing: 8,
-              children: [
-                for (final slot in _slots)
-                  ChoiceChip(
-                    label: Text(
-                      DateTime.parse(slot)
-                          .toLocal()
-                          .toString()
-                          .substring(11, 16),
+      body: ResponsiveCenter(
+        maxWidth: 700,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SectionHeader(
+                      title: '1. Ngày & giờ tái khám',
+                      subtitle: 'Bệnh nhân #${widget.patientId}',
                     ),
-                    selected: _slot == slot,
-                    onSelected: (_) => setState(() => _slot = slot),
-                  ),
-              ],
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: doctorId == null
+                            ? null
+                            : () => _chooseDate(doctorId),
+                        icon: const Icon(Icons.calendar_month_outlined),
+                        label: Text('${formatDate(_date)} · Chọn ngày'),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    if (_loading)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 14),
+                        child: Center(child: CircularProgressIndicator()),
+                      )
+                    else if (_slots.isEmpty)
+                      const ClinicBanner(
+                        message:
+                            'Nhấn "Chọn ngày" để tải khung giờ trống theo ca trực của bạn.',
+                        tone: BadgeTone.info,
+                      )
+                    else
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          for (final slot in _slots)
+                            ChoiceChip(
+                              label: Text(
+                                formatTimeOnly(DateTime.parse(slot)),
+                              ),
+                              selected: _slot == slot,
+                              onSelected: (_) => setState(() => _slot = slot),
+                            ),
+                        ],
+                      ),
+                  ],
+                ),
+              ),
             ),
-          TextField(
-            controller: _address,
-            decoration: const InputDecoration(labelText: 'Địa chỉ khám'),
-          ),
-          TextField(
-            controller: _note,
-            decoration: const InputDecoration(
-              labelText: 'Ghi chú cho bệnh nhân',
+            const SizedBox(height: 14),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SectionHeader(title: '2. Địa điểm & dặn dò'),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _address,
+                      decoration: const InputDecoration(
+                        labelText: 'Địa chỉ khám',
+                        prefixIcon: Icon(Icons.location_on_outlined),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _note,
+                      maxLines: 3,
+                      decoration: const InputDecoration(
+                        labelText: 'Ghi chú cho bệnh nhân',
+                        prefixIcon: Icon(Icons.notes_outlined),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
+            if (_error != null) ...[
+              const SizedBox(height: 14),
+              ClinicBanner(message: _error!, tone: BadgeTone.danger),
+            ],
+            const SizedBox(height: 20),
+            FilledButton.icon(
+              onPressed: _saving ? null : _save,
+              icon: _saving
+                  ? const SizedBox.square(
+                      dimension: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(Icons.event_available_outlined),
+              label: Text(_saving ? 'Đang lưu…' : 'Tạo lịch đã xác nhận'),
+            ),
+          ],
           ),
-          const SizedBox(height: 16),
-          FilledButton(
-            onPressed: _saving ? null : _save,
-            child: Text(_saving ? 'Đang lưu…' : 'Tạo lịch đã xác nhận'),
-          ),
-        ],
+        ),
       ),
     );
   }

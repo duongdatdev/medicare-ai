@@ -3,6 +3,25 @@ import { DoctorService } from './doctor.service.js';
 import { BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
 
 describe('DoctorService availability', () => {
+  it('includes patient details when returning a doctor’s appointments', async () => {
+    const appointments = { find: vi.fn().mockResolvedValue([]) };
+    const service = new DoctorService(
+      {} as never,
+      appointments as never,
+      {} as never,
+      {} as never,
+      {} as never,
+    );
+
+    await service.listAppointments(4, 1);
+
+    expect(appointments.find).toHaveBeenCalledWith({
+      where: { doctorId: 4, confirmCondition: 1 },
+      relations: { patient: true },
+      order: { apTime: 'ASC' },
+    });
+  });
+
   it('lists 30-minute slots only inside assigned shifts and removes booked slots', async () => {
     const appointments = { find: vi.fn().mockResolvedValue([
       { apTime: new Date('2026-11-12T00:30:00Z'), cancelReason: null },

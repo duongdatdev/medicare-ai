@@ -1,18 +1,21 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:dacn_app/screens/doctor_shifts_screen.dart';
+import 'package:dacn_app/main.dart';
+import 'package:dacn_app/models/appointment.dart';
+import 'package:dacn_app/screens/admin_diseases_screen.dart';
 import 'package:dacn_app/screens/admin_notifications_screen.dart';
-import 'package:dacn_app/screens/complete_appointment_dialog.dart';
-import 'package:dacn_app/screens/appointments_screen.dart';
+import 'package:dacn_app/screens/admin_overview.dart';
 import 'package:dacn_app/screens/appointment_detail_screen.dart';
+import 'package:dacn_app/screens/appointments_screen.dart';
+import 'package:dacn_app/screens/complete_appointment_dialog.dart';
+import 'package:dacn_app/screens/doctor_shifts_screen.dart';
 import 'package:dacn_app/screens/news_feed_screen.dart';
 import 'package:dacn_app/screens/patient_profile_screen.dart';
 import 'package:dacn_app/screens/payment_screen.dart';
-import 'package:dacn_app/models/appointment.dart';
-import 'package:dacn_app/main.dart';
 import 'package:dacn_app/services/api.dart';
 import 'package:dacn_app/services/appointments.dart';
+import 'package:dacn_app/utils/formatters.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -74,27 +77,52 @@ void main() {
 
     await tester.pumpWidget(const MaterialApp(home: PatientProfileScreen()));
     await tester.pumpAndSettle();
-    await tester.drag(find.byType(ListView), const Offset(0, -1000));
-    await tester.pumpAndSettle();
     expect(find.text('DN4012345678901'), findsOneWidget);
+
+    await tester.scrollUntilVisible(
+      find.text('012345678901'),
+      250,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
     expect(find.text('012345678901'), findsOneWidget);
 
-    await tester.drag(find.byType(ListView), const Offset(0, 1000));
+    final ageField = find.widgetWithText(TextFormField, 'Tuổi');
+    await tester.scrollUntilVisible(
+      ageField,
+      -250,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextFormField).at(2), 'abc');
-    await tester.drag(find.byType(ListView), const Offset(0, -1000));
+    await tester.enterText(ageField, 'abc');
+
+    final saveBtn = find.text('Lưu hồ sơ');
+    await tester.scrollUntilVisible(
+      saveBtn,
+      250,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Lưu hồ sơ'));
+    await tester.tap(saveBtn);
     await tester.pumpAndSettle();
     expect(find.text('Nhập tuổi hợp lệ'), findsOneWidget);
     expect(adapter.requests.where((r) => r.method == 'PUT'), isEmpty);
 
-    await tester.drag(find.byType(ListView), const Offset(0, 800));
+    await tester.scrollUntilVisible(
+      ageField,
+      -250,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextFormField).at(2), '36');
-    await tester.drag(find.byType(ListView), const Offset(0, -1000));
+    await tester.enterText(ageField, '36');
+
+    await tester.scrollUntilVisible(
+      saveBtn,
+      250,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Lưu hồ sơ'));
+    await tester.tap(saveBtn);
     await tester.pumpAndSettle();
     final update = adapter.requests.singleWhere((r) => r.method == 'PUT');
     expect(update.path, '/patient/me');
@@ -130,11 +158,15 @@ void main() {
       const MaterialApp(home: PaymentScreen(appointmentId: 21)),
     );
     await tester.pumpAndSettle();
-    expect(find.text('300000'), findsOneWidget);
+    expect(find.text('300.000 ₫'), findsOneWidget);
     await tester.tap(find.text('Chuyển khoản VietQR'));
     await tester.pumpAndSettle();
 
-    await tester.drag(find.byType(ListView), const Offset(0, -1000));
+    await tester.scrollUntilVisible(
+      find.text('Nội dung chuyển khoản: DACN21'),
+      250,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.pumpAndSettle();
     expect(find.text('Nội dung chuyển khoản: DACN21'), findsOneWidget);
     expect(
@@ -185,7 +217,7 @@ void main() {
     await Appointments().patientCancel(21, 'Bận đột xuất');
     await Appointments().reschedule(
       21,
-      DateTime.utc(2026, 11, 14, 9),
+      DateTime.utc(2026, 11, 14, 9).toIso8601String(),
       doctor: false,
     );
 
@@ -197,6 +229,10 @@ void main() {
     );
     expect(adapter.requests[1].method, 'PUT');
     expect(adapter.requests[1].path, '/patient/reschedule-appointment/21');
+    expect(
+      (adapter.requests[1].data as Map<String, dynamic>)['apTime'],
+      '2026-11-14T09:00:00.000Z',
+    );
   });
 
   testWidgets('doctor completion dialog returns selected bill items', (
@@ -243,7 +279,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Khám tổng quát'), findsOneWidget);
-    expect(find.text('180000 ₫ · BHYT'), findsOneWidget);
+    expect(find.text('180.000 ₫ · BHYT'), findsOneWidget);
     expect(
       tester
           .widget<FilledButton>(find.widgetWithText(FilledButton, 'Hoàn tất'))
@@ -503,7 +539,7 @@ void main() {
       day.day,
       10,
       30,
-    ).toIso8601String();
+    ).toUtc().toIso8601String();
     final adapter = _StubAdapter((request) {
       if (request.path == '/patient/appointment/44') {
         return _json({
@@ -535,9 +571,26 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    final expectedTime = formatDateTime(
+      DateTime.parse('2026-11-12T09:00:00.000Z'),
+    );
+    expect(find.text(expectedTime), findsOneWidget);
+    expect(find.text('2026-11-12T09:00:00.000Z'), findsNothing);
+    await tester.scrollUntilVisible(
+      find.text('Chọn ngày đổi lịch'),
+      250,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Chọn ngày đổi lịch'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byType(ActionChip).first,
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.byType(ActionChip).first);
     await tester.pumpAndSettle();
@@ -546,6 +599,207 @@ void main() {
       (request) => request.path == '/patient/reschedule-appointment/44',
     );
     expect(reschedule.method, 'PUT');
-    expect((reschedule.data as Map<String, dynamic>)['apTime'], isA<String>());
+    expect((reschedule.data as Map<String, dynamic>)['apTime'], slot);
   });
+
+  testWidgets(
+    'patient sees a newly booked appointment without switching tabs',
+    (tester) async {
+      final day = DateTime.now().add(const Duration(days: 1));
+      final slot = DateTime.utc(
+        day.year,
+        day.month,
+        day.day,
+        3,
+      ).toIso8601String();
+      final slotLabel = DateTime.parse(slot)
+          .toLocal()
+          .toString()
+          .substring(11, 16);
+      final appointments = <Map<String, dynamic>>[];
+      late _StubAdapter adapter;
+      adapter = _StubAdapter((request) {
+        if (request.path == '/news') return _json([]);
+        if (request.path == '/patient/list-appointment') {
+          return _json(appointments);
+        }
+        if (request.path == '/doctor/list') {
+          return _json([
+            {'id': 9, 'name': 'Dr. Nguyen'},
+          ]);
+        }
+        if (request.path == '/doctor/availability') return _json([slot]);
+        if (request.path == '/patient/create-appointment') {
+          final body = request.data as Map<String, dynamic>;
+          appointments.add({
+            'id': 91,
+            'apTime': body['apTime'],
+            'confirmCondition': 1,
+            'address': body['address'],
+            'note': body['note'],
+            'doctorName': '',
+            'doctor': {'id': 9, 'name': 'Dr. Nguyen'},
+            'doctorId': 9,
+          });
+          return _json({'id': 91});
+        }
+        return _json({'ok': true});
+      });
+      _useAdapter(adapter);
+
+      await tester.pumpWidget(
+        const MaterialApp(home: RoleHome(role: 'patient')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(NavigationDestination).at(1));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Đặt lịch'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(ChoiceChip, slotLabel));
+      final addressField = find.widgetWithText(TextField, 'Địa chỉ khám');
+      final noteField = find.widgetWithText(
+        TextField,
+        'Ghi chú (không bắt buộc)',
+      );
+      await tester.scrollUntilVisible(
+        noteField,
+        250,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(addressField, 'Clinic');
+      await tester.enterText(noteField, 'fresh-appointment');
+      await tester.tap(find.text('Xác nhận đặt lịch'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('fresh-appointment'), findsOneWidget);
+      expect(find.text('Dr. Nguyen'), findsOneWidget);
+      final create = adapter.requests.singleWhere(
+        (request) => request.path == '/patient/create-appointment',
+      );
+      expect((create.data as Map<String, dynamic>)['apTime'], slot);
+    },
+  );
+
+  testWidgets(
+    'doctor account tab displays summary stats and wide screen uses NavigationRail',
+    (tester) async {
+      final adapter = _StubAdapter((request) {
+        if (request.path == '/doctor/my-shifts') {
+          return _json([
+            {
+              'id': 1,
+              'type': 'Sáng',
+              'status': 'ACTIVE',
+              'startTime': '2026-11-12T01:00:00.000Z',
+              'endTime': '2026-11-12T05:00:00.000Z',
+            },
+          ]);
+        }
+        return _json([]);
+      });
+      _useAdapter(adapter);
+
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      await tester.pumpWidget(const MaterialApp(home: RoleHome(role: 'doctor')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(NavigationRail), findsOneWidget);
+      await tester.tap(find.text('Tài khoản'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Tổng quan công việc'), findsOneWidget);
+      expect(find.text('Ca đang hoạt động'), findsOneWidget);
+      expect(find.text('1'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'admin overview and diseases render KPI metrics, shifts, and formatted fees on narrow phone',
+    (tester) async {
+      final adapter = _StubAdapter((request) {
+        if (request.path == '/admin/doctor-salaries') {
+          return _json([
+            {
+              'doctorId': 1,
+              'doctorName': 'BS. Trần Minh',
+              'totalHours': 6,
+              'hourlyRate': 300000,
+              'salary': 1800000,
+            },
+          ]);
+        }
+        if (request.path == '/doctor/list') {
+          return _json([
+            {
+              'id': 1,
+              'name': 'BS. Trần Minh',
+              'phone': '0901234567',
+              'email': 'minh@clinic.test',
+            },
+          ]);
+        }
+        if (request.path == '/doctor/shift-overview') {
+          return _json([
+            {
+              'id': 10,
+              'type': 'Sáng',
+              'startTime': '2026-11-12T01:00:00.000Z',
+              'endTime': '2026-11-12T05:00:00.000Z',
+              'doctor': {'name': 'BS. Trần Minh'},
+            },
+          ]);
+        }
+        if (request.path == '/diseases') {
+          return _json({
+            'examFee': 50000,
+            'items': [
+              {
+                'id': 1,
+                'name': 'Khám da liễu',
+                'price': 150000,
+                'bhytCovered': true,
+              },
+            ],
+          });
+        }
+        return _json([]);
+      });
+      _useAdapter(adapter);
+
+      tester.view.physicalSize = const Size(360, 780);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      await tester.pumpWidget(
+        const MaterialApp(home: Scaffold(body: AdminOverview())),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Tổng quan phòng khám'), findsOneWidget);
+      expect(find.text('1.800.000 ₫'), findsWidgets);
+      await tester.scrollUntilVisible(
+        find.text('Phân ca đang hoạt động'),
+        250,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('BS. Trần Minh · Sáng'), findsOneWidget);
+
+      await tester.pumpWidget(const MaterialApp(home: AdminDiseasesScreen()));
+      await tester.pumpAndSettle();
+      expect(find.text('50.000 ₫'), findsOneWidget);
+      expect(find.text('150.000 ₫'), findsOneWidget);
+      expect(find.text('Có BHYT'), findsOneWidget);
+    },
+  );
 }

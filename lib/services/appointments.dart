@@ -13,15 +13,22 @@ class Appointments {
       2 => '/doctor/list-completed',
       _ => '/doctor/list-unAcpappointment',
     }),
+    doctor: true,
   );
 
-  List<Appointment> _parse(List<dynamic> values) => values
-      .map((value) => Appointment.fromJson(value as Map<String, dynamic>))
-      .toList();
+  List<Appointment> _parse(List<dynamic> values, {bool doctor = false}) =>
+      values
+          .map(
+            (value) => Appointment.fromJson(
+              value as Map<String, dynamic>,
+              doctor: doctor,
+            ),
+          )
+          .toList();
 
   Future<void> create({
     required int doctorId,
-    required DateTime time,
+    required String apTime,
     required String address,
     String? note,
   }) async {
@@ -29,7 +36,7 @@ class Appointments {
       '/patient/create-appointment',
       data: {
         'doctorId': doctorId,
-        'apTime': time.toIso8601String(),
+        'apTime': apTime,
         'address': address,
         if (note != null && note.isNotEmpty) 'note': note,
       },
@@ -69,10 +76,10 @@ class Appointments {
     return response.data ?? const {};
   }
 
-  Future<void> reschedule(int id, DateTime time, {required bool doctor}) async {
+  Future<void> reschedule(int id, String apTime, {required bool doctor}) async {
     await _api.put(
       '/${doctor ? 'doctor' : 'patient'}/reschedule-appointment/$id',
-      data: {'apTime': time.toIso8601String()},
+      data: {'apTime': apTime},
     );
   }
 }

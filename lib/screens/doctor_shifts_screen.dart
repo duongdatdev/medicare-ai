@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../services/api.dart';
+import '../theme/app_colors.dart';
+import '../utils/formatters.dart';
+import '../widgets/clinic_widgets.dart';
 
 class DoctorShiftsScreen extends StatefulWidget {
   const DoctorShiftsScreen({super.key});
+
   @override
   State<DoctorShiftsScreen> createState() => _DoctorShiftsScreenState();
 }
@@ -13,6 +17,8 @@ class _DoctorShiftsScreenState extends State<DoctorShiftsScreen> {
   List<dynamic> _templates = [];
   int? _selectedTemplateId;
   DateTime _date = DateTime.now().add(const Duration(days: 1));
+  bool _registering = false;
+
   @override
   void initState() {
     super.initState();
@@ -23,27 +29,37 @@ class _DoctorShiftsScreenState extends State<DoctorShiftsScreen> {
     _shifts = Api.instance.list('/doctor/my-shifts');
     Api.instance.list('/doctor/shift-templates').then((value) {
       if (mounted) setState(() => _templates = value);
-    });
+    }).catchError((_) {});
+  }
+
+  Future<void> _refresh() async {
+    setState(_reload);
+    await _shifts;
   }
 
   Future<void> _register() async {
     final shiftId = _selectedTemplateId;
     if (shiftId == null) return;
+    setState(() => _registering = true);
     try {
       await Api.instance.client.post(
         '/doctor/register-shift',
-        data: {
-          'shiftId': shiftId,
-          'date':
-              '${_date.year}-${_date.month.toString().padLeft(2, '0')}-${_date.day.toString().padLeft(2, '0')}',
-        },
+        data: {'shiftId': shiftId, 'date': formatDateApi(_date)},
       );
-      if (mounted) setState(_reload);
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Đã đăng ký ca trực')));
+        setState(_reload);
+      }
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('$error')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(formatApiError(error))));
       }
+    } finally {
+      if (mounted) setState(() => _registering = false);
     }
   }
 
@@ -60,11 +76,17 @@ class _DoctorShiftsScreenState extends State<DoctorShiftsScreen> {
   Future<void> _cancel(int id) async {
     try {
       await Api.instance.client.post('/doctor/cancel-assignment/$id');
-      if (mounted) setState(_reload);
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Đã hủy ca trực')));
+        setState(_reload);
+      }
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('$error')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(formatApiError(error))));
       }
     }
   }
@@ -73,41 +95,58 @@ class _DoctorShiftsScreenState extends State<DoctorShiftsScreen> {
   Widget build(BuildContext context) => Column(
     children: [
       Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          children: [
-            DropdownButtonFormField<int>(
-              initialValue: _selectedTemplateId,
-              decoration: const InputDecoration(labelText: 'Loại ca'),
-              items: [
-                for (final template in _templates)
-                  DropdownMenuItem<int>(
-                    value: (template['id'] as num).toInt(),
-                    child: Text(
-                      '${template['type']} · ${template['startTime']}–${template['endTime']}',
-                    ),
-                  ),
-              ],
-              onChanged: (value) => setState(() => _selectedTemplateId = value),
-            ),
-            const SizedBox(height: 8),
-            Row(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+        child: Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: _chooseDate,
-                    icon: const Icon(Icons.calendar_month),
-                    label: Text('${_date.day}/${_date.month}/${_date.year}'),
-                  ),
+                const SectionHeader(
+                  title: 'Đăng ký ca trực mới',
+                  subtitle: 'Chọn mẫu ca và ngày làm việc trong tương lai',
                 ),
-                const SizedBox(width: 8),
-                FilledButton(
-                  onPressed: _selectedTemplateId == null ? null : _register,
-                  child: const Text('Đăng ký ca'),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<int>(
+                  initialValue: _selectedTemplateId,
+                  decoration: const InputDecoration(
+                    labelText: 'Loại ca',
+                    prefixIcon: Icon(Icons.schedule_outlined),
+                  ),
+                  items: [
+                    for (final template in _templates)
+                      DropdownMenuItem<int>(
+                        value: (template['id'] as num).toInt(),
+                        child: Text(
+                          '${template['type']} · ${template['startTime']}–${template['endTime']}',
+                        ),
+                      ),
+                  ],
+                  onChanged: (value) =>
+                      setState(() => _selectedTemplateId = value),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _chooseDate,
+                        icon: const Icon(Icons.calendar_month_outlined),
+                        label: Text(formatDate(_date)),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    FilledButton(
+                      onPressed: _selectedTemplateId == null || _registering
+                          ? null
+                          : _register,
+                      child: const Text('Đăng ký ca'),
+                    ),
+                  ],
                 ),
               ],
             ),
-          ],
+          ),
         ),
       ),
       Expanded(
@@ -118,42 +157,117 @@ class _DoctorShiftsScreenState extends State<DoctorShiftsScreen> {
               return const Center(child: CircularProgressIndicator());
             }
             if (snapshot.hasError) {
-              return Center(
-                child: TextButton(
-                  onPressed: () => setState(_reload),
-                  child: const Text('Tải lại ca trực'),
-                ),
+              return ErrorStateView(
+                message: formatApiError(snapshot.error!),
+                onRetry: () => setState(_reload),
+                retryLabel: 'Tải lại ca trực',
               );
             }
             final items = snapshot.data ?? [];
             if (items.isEmpty) {
-              return const Center(child: Text('Chưa đăng ký ca trực'));
+              return const EmptyStateView(
+                icon: Icons.event_busy_outlined,
+                title: 'Chưa đăng ký ca trực',
+                subtitle: 'Chọn loại ca và ngày phía trên để bắt đầu đăng ký.',
+              );
             }
             return RefreshIndicator(
-              onRefresh: () async => setState(_reload),
-              child: ListView(
+              onRefresh: _refresh,
+              child: ListView.separated(
                 padding: const EdgeInsets.all(16),
-                children: [
-                  for (final item in items)
-                    Card(
-                      child: ListTile(
-                        leading: const Icon(Icons.schedule),
-                        title: Text(
-                          '${item['type'] ?? 'Ca trực'} · ${item['status'] ?? ''}',
-                        ),
-                        subtitle: Text(
-                          '${item['startTime'] ?? ''} – ${item['endTime'] ?? ''}',
-                        ),
-                        trailing: item['status'] == 'ACTIVE'
-                            ? IconButton(
-                                icon: const Icon(Icons.event_busy),
-                                onPressed: () =>
-                                    _cancel((item['id'] as num).toInt()),
-                              )
-                            : null,
+                itemCount: items.length,
+                separatorBuilder: (context, index) =>
+                    const SizedBox(height: 10),
+                itemBuilder: (context, index) {
+                  final item = items[index] as Map<String, dynamic>;
+                  final active = item['status'] == 'ACTIVE';
+                  final start = formatIsoDateTime(
+                    item['startTime'],
+                    fallback: '—',
+                  );
+                  final endDt = DateTime.tryParse('${item['endTime'] ?? ''}');
+                  final endStr = endDt != null
+                      ? formatTimeOnly(endDt)
+                      : '${item['endTime'] ?? ''}';
+
+                  return Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: active
+                                  ? AppColors.primarySoft
+                                  : AppColors.neutralBg,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(
+                              Icons.schedule_outlined,
+                              color: active
+                                  ? AppColors.primaryDark
+                                  : AppColors.textSecondary,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        '${item['type'] ?? 'Ca trực'}',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 15.5,
+                                        ),
+                                      ),
+                                    ),
+                                    StatusBadge(
+                                      label: active ? 'Hoạt động' : 'Đã hủy',
+                                      tone: active
+                                          ? BadgeTone.success
+                                          : BadgeTone.neutral,
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '$start – $endStr',
+                                  style: const TextStyle(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 13.5,
+                                  ),
+                                ),
+                                if (!active && item['duration'] != null)
+                                  Text(
+                                    'Thời lượng ghi nhận: ${formatHours(item['duration'])}',
+                                    style: const TextStyle(
+                                      color: AppColors.textMuted,
+                                      fontSize: 12.5,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          if (active) ...[
+                            const SizedBox(width: 8),
+                            IconButton(
+                              tooltip: 'Hủy ca trực',
+                              color: AppColors.dangerFg,
+                              icon: const Icon(Icons.event_busy_outlined),
+                              onPressed: () =>
+                                  _cancel((item['id'] as num).toInt()),
+                            ),
+                          ],
+                        ],
                       ),
                     ),
-                ],
+                  );
+                },
               ),
             );
           },
